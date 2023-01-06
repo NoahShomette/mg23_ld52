@@ -1,0 +1,37 @@
+[package]
+name = "mg23"
+version = "0.1.0"
+edition = "2021"
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
+
+[dependencies]
+bevy = { version = "0.9.1", default-features = false, features = [  "wayland",
+    "animation",
+    "bevy_asset",
+    "bevy_gilrs",
+    "bevy_scene",
+    "bevy_winit",
+    "render",
+    "png",
+    "hdr",
+    "wav",
+    "x11",
+    "filesystem_watcher", ] }
+bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs" }
+matchbox_socket = { git = "https://github.com/NoahShomette/matchbox", features = ["ggrs-socket"] }
+bevy_asset_loader = { version = "0.14.1", features = ["stageless"] }
+# bevy_magic_light_2d = {git = "https://github.com/zaycev/bevy-magic-light-2d", branch = "main"}
+iyes_loopless = "0.9.1"
+bevy_tiled_camera = "0.5.2"
+bytemuck = "1.12.3"
+benimator = "4.1.0"
+leafwing-input-manager = "0.7.1"
+bevy_rapier2d = "0.19.0"
+bevy_rapier_collider_gen = "0.1.1"
