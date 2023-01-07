@@ -1,5 +1,6 @@
-﻿use bevy_ggrs::ggrs::Config;
-use crate::input::PlayerControls;
+﻿use bevy_ggrs::ggrs::{Config};
+use crate::player::input::PlayerControls;
+
 
 #[derive(Debug)]
 pub struct GGRSConfig;

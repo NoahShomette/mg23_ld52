@@ -1,7 +1,7 @@
 ﻿use bevy::prelude::{App, Camera, Commands, GlobalTransform, Plugin, Query, Res, ResMut, Resource, Vec2, Windows};
 use bevy::render::camera::RenderTarget;
 use bevy_tiled_camera::{TiledCameraBundle, WorldSpace};
-use iyes_loopless::prelude::IntoConditionalSystem;
+use iyes_loopless::prelude::{AppLooplessStateExt, IntoConditionalSystem};
 use crate::GameState;
 
 /// A plugin containing the systems and resources for the Bevy_GGF camera system to function
@@ -11,8 +11,8 @@ impl Plugin for CamPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<CursorWorldPos>()
-            .add_system(update_cursor_world_pos.run_in_state(GameState::BetweenRound))
-            .add_system(update_cursor_world_pos.run_in_state(GameState::InRound));
+            .add_system( update_cursor_world_pos.run_in_state(GameState::BetweenRound))
+            .add_system( update_cursor_world_pos.run_in_state(GameState::InRound));
 
     }
 }
