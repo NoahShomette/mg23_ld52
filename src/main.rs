@@ -37,6 +37,11 @@ const FPS: usize = 60;
 fn main() {
     let mut app = App::new();
 
+    #[cfg(target_arch = "wasm32")]
+    {
+        app.add_plugin(bevy_web_resizer::Plugin);
+    }
+    
     GGRSPlugin::<GGRSConfig>::new()
         // define frequency of rollback game logic update
         //.with_update_frequency(FPS)
@@ -56,6 +61,7 @@ fn main() {
                     .with_system(velocity_system.after(move_players))
                     .with_system(update_dash_info.after(velocity_system))
                     
+                    // physics stuff - need to be at the end
                     .with_system(clear_correction_system.after(update_dash_info))
                     .with_system(update_movable_system.after(clear_correction_system))
                     .with_system(collision_system.after(update_movable_system))
@@ -78,8 +84,9 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     window: WindowDescriptor {
-                        mode: WindowMode::Windowed,
+                        position: WindowPosition::Automatic,
                         fit_canvas_to_parent: true,
+                        canvas: Some("#bevy".to_string()),
                         ..default()
                     },
                     ..default()
