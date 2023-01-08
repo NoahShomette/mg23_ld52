@@ -1,22 +1,33 @@
 use crate::assets::Sprites;
 use crate::camera::CamPlugin;
 use crate::networking::ggrs::GGRSConfig;
-use crate::networking::{move_players, NetworkPlugin, start_matchbox_socket, wait_for_players};
-use crate::player::{input, PlayerId};
+use crate::networking::rollback_systems::{move_players, update_dash_info, velocity_correction_system, velocity_system};
+use crate::networking::{
+    start_matchbox_socket, wait_for_players, NetworkPlugin, RoomNetworkSettings,
+};
+use crate::physics::{Movement, SepaxCustomPlugin};
+use crate::player::input::input;
+use crate::player::{
+    MovementState, PlayerBundle, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells,
+};
+use crate::spell::Spell;
 use bevy::prelude::*;
 use bevy::window::close_on_esc;
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
 use bevy_ggrs::{GGRSPlugin, Rollback, RollbackIdProvider};
+use bevy_sepax2d::prelude::{Movable, Sepax, SepaxPlugin};
+use bevy_sepax2d::Convex;
 use bevy_tiled_camera::{TiledCameraBundle, TiledCameraPlugin, WorldSpace};
 use iyes_loopless::prelude::{AppLooplessStateExt, IntoConditionalSystem, NextState};
-use crate::player::input::input;
+use sepax2d::prelude::AABB;
 
 mod assets;
 mod camera;
+mod game_state;
 mod networking;
+mod physics;
 mod player;
 mod spell;
-mod game_state;
 
 const FPS: usize = 60;
 
@@ -30,11 +41,22 @@ fn main() {
         .with_input_system(input)
         // register types of components AND resources you want to be rolled back
         .register_rollback_component::<Transform>()
+        .register_rollback_component::<Movement>()
+        .register_rollback_component::<PlayerMovementStats>()
+        .register_rollback_component::<PlayerMovementState>()
+
         // these systems will be executed as part of the advance frame update
-        .with_rollback_schedule(Schedule::default().with_stage(
-            "ROLLBACK_STAGE",
-            SystemStage::single_threaded().with_system(move_players),
-        ))
+        .with_rollback_schedule(
+            Schedule::default().with_stage(
+                "ROLLBACK_STAGE",
+                SystemStage::single_threaded()
+                    .with_system(move_players)
+                    .with_system(velocity_system.after(move_players))
+                    .with_system(velocity_correction_system.after(velocity_system))
+                    .with_system(update_dash_info.after(velocity_correction_system)),
+
+            ),
+        )
         // make it happen in the bevy app
         .build(&mut app);
 
@@ -59,6 +81,8 @@ fn main() {
                 }),
         )
         .add_plugin(TiledCameraPlugin)
+        //.add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.0))
+        .add_plugin(SepaxCustomPlugin)
         // base systems
         .add_enter_system(GameState::WaitingForPlayers, setup)
         .add_enter_system(GameState::WaitingForPlayers, start_matchbox_socket)
@@ -69,17 +93,18 @@ fn main() {
     // crate plugins
     app.add_plugin(CamPlugin).add_plugin(NetworkPlugin);
 
+    // Debug stuff
+    //app.add_plugin(RapierDebugRenderPlugin::default());
     app.add_system(close_on_esc);
 
     app.run();
 }
 
-
 /// The game state
-/// 
+///
 /// - AssetLoading starts at the beginning of every time the app is launched, runs all the asset stuff, and then is never used again
 /// - Menu is used for the main menu and associated places
-/// - WaitingForPlayers is the pregame, menu, lobby. Eg, the player selects find match, it goes to 
+/// - WaitingForPlayers is the pregame, menu, lobby. Eg, the player selects find match, it goes to
 ///     waiting for players, the player can either quit the matchmaking, or wait to find a match
 /// - BetweenRound is the period between fighting rounds. The players are spawned, the game countdowns till the round starts, the players see the map, etc
 /// - InRound is the actual gameplay. It starts, the players are given control of their characters, and it plays until the round is ended
@@ -97,13 +122,62 @@ fn spawn_players(
     sprites: Res<Sprites>,
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
+    settings: Res<RoomNetworkSettings>,
 ) {
-    commands
-        .spawn(SpriteBundle {
+    for i in 0..settings.player_count {
+        commands.spawn(PlayerBundle {
+            player_id: PlayerId { handle: i as usize },
+            rollback_id: Rollback::new(rip.next_id()),
+            player_spells: PlayerSpells {
+                autoattack: Spell {},
+                shield: Spell {},
+                spells: vec![],
+            },
+            player_movement: PlayerMovementStats {
+                speed: 100.0,
+                dash_power: 3.0,
+                dash_duration: 0.2,
+                dash_cooldown_length: 2.0,
+                dash_cooldown: 0.0,
+            },
+            player_movement_state: PlayerMovementState {
+                can_dash: false,
+                movement_state: MovementState::default(),
+            },
+            sepax: Sepax {
+                convex: Convex::AABB(AABB::new((0.0, 0.0 + (i as f32 * 20.0)), 20.0, 20.0)),
+            },
+            movable: Movable { axes: vec![] },
+            movement: Default::default(),
+            sprite_bundle: SpriteBundle {
+                transform: Transform {
+                    translation: Vec3 {
+                        x: 0.0,
+                        y: 0.0 + (i as f32 * 20.0),
+                        z: 1.0,
+                    },
+                    rotation: Default::default(),
+                    scale: Vec3 {
+                        x: 1.0,
+                        y: 1.0,
+                        z: 1.0,
+                    },
+                },
+                texture: sprites.mageling_green.clone_weak(),
+                ..default()
+            },
+        });
+    }
+
+    commands.spawn((
+        Sepax {
+            convex: Convex::AABB(AABB::new((0.0, 0.0 + (4 as f32 * 20.0)), 20.0, 20.0)),
+        },
+        SpriteBundle {
             transform: Transform {
                 translation: Vec3 {
                     x: 0.0,
-                    y: 0.0,
+                    y: 0.0 + (4 as f32 * 20.0),
                     z: 1.0,
                 },
                 rotation: Default::default(),
@@ -115,30 +189,8 @@ fn spawn_players(
             },
             texture: sprites.mageling_green.clone_weak(),
             ..default()
-        })
-        .insert(PlayerId { handle: 0 })
-        .insert(Rollback::new(rip.next_id()));
-
-    commands
-        .spawn(SpriteBundle {
-            transform: Transform {
-                translation: Vec3 {
-                    x: 10.0,
-                    y: 10.0,
-                    z: 1.0,
-                },
-                rotation: Default::default(),
-                scale: Vec3 {
-                    x: 1.0,
-                    y: 1.0,
-                    z: 1.0,
-                },
-            },
-            texture: sprites.mageling_green.clone_weak(),
-            ..default()
-        })
-        .insert(PlayerId { handle: 1 })
-        .insert(Rollback::new(rip.next_id()));
+        },
+    ));
 
     commands.insert_resource(NextState(GameState::InRound))
 }
