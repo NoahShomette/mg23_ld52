@@ -1,50 +1,49 @@
 ﻿use crate::networking::ggrs::GGRSConfig;
-use crate::{GameState, PlayerId, FPS};
-use bevy::prelude::{info, App, Commands, Plugin, Query, Res, ResMut, Resource, Transform};
+use crate::{GameState, FPS};
+use bevy::prelude::{info, App, Commands, Plugin, Res, ResMut, Resource};
 use bevy::tasks::IoTaskPool;
 use bevy_ggrs::ggrs::SessionBuilder;
-use bevy_ggrs::{PlayerInputs, Session};
+use bevy_ggrs::{Session};
 use iyes_loopless::prelude::NextState;
 use matchbox_socket::WebRtcSocket;
 
 pub mod ggrs;
+pub mod rollback_systems;
 
 pub struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
         // insert basic default matchmaking resource for testing
-        app.insert_resource(RoomNetworkSettings::default_matchmake_room());
-
+        //app.insert_resource(RoomNetworkSettings::default_matchmake_room());
+        
         // insert basic default local matchmaking resource for testing
-        /*
-        app.insert_resource(RoomNetworkSettings {
-            network_type: MatchmakeType::PrivateRoom(String::from("mg23")),
-            ip: "127.0.0.1".to_string(),
-            port: "6500".to_string(),
-            player_count: 2,
-        });
-        
-         */
-        
+        app.insert_resource(RoomNetworkSettings::testing_local());
+
+        //testing online
+        //app.insert_resource(RoomNetworkSettings::testing_ip());
+
+
+
+
     }
 }
 
 #[derive(Resource)]
 pub struct RoomNetworkSettings {
     // Network type
-    network_type: MatchmakeType,
-    ip: String,
-    port: String,
-    player_count: u32,
+    pub network_type: MatchmakeType,
+    pub ip: String,
+    pub port: String,
+    pub player_count: u32,
 }
 
 impl RoomNetworkSettings {
     pub fn default_matchmake_room() -> Self {
         RoomNetworkSettings {
             network_type: MatchmakeType::Matchmake,
-            ip: "172.124.208.194".to_string(),
-            port: "6500".to_string(),
+            ip: "match.gschup.dev".to_string(),
+            port: "".to_string(),
             player_count: 2,
         }
     }
@@ -61,11 +60,30 @@ impl RoomNetworkSettings {
     pub fn private_room(room_key: String, player_count: u32) -> Self {
         RoomNetworkSettings {
             network_type: MatchmakeType::PrivateRoom(room_key),
-            ip: "172.124.208.194".to_string(),
-            port: "6500".to_string(),
+            ip: "match.gschup.dev".to_string(),
+            port: "".to_string(),
             player_count,
         }
     }
+    
+    fn testing_ip() -> Self {
+        RoomNetworkSettings {
+            network_type: MatchmakeType::Matchmake,
+            ip: "172.124.208.194".to_string(),
+            port: "6500".to_string(),
+            player_count: 2,
+        }
+    }
+
+    fn testing_local() -> Self {
+        RoomNetworkSettings {
+            network_type: MatchmakeType::Matchmake,
+            ip: "127.0.0.1".to_string(),
+            port: "6500".to_string(),
+            player_count: 2,
+        }
+    }
+    
 }
 
 /// Default is a local room
@@ -177,16 +195,4 @@ pub fn wait_for_players(
 
     commands.insert_resource(Session::P2PSession(session));
     commands.insert_resource(NextState(GameState::BetweenRound))
-}
-
-pub fn move_players(
-    inputs: Res<PlayerInputs<GGRSConfig>>,
-    mut players_query: Query<(&mut Transform, &PlayerId)>,
-) {
-    for (mut transform, player) in players_query.iter_mut() {
-        let (input, _) = inputs[player.handle];
-        let move_speed = 2.5;
-        let move_delta = (input.move_direction * move_speed).extend(0.);
-        transform.translation += move_delta;
-    }
 }
