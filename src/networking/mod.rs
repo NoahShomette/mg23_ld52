@@ -163,7 +163,7 @@ pub fn wait_for_players(
     socket_ref.accept_new_connections();
     let players = socket_ref.players();
 
-    info!("{}", socket_ref.players().len());
+    //info!("{}", socket_ref.players().len());
 
     if socket_ref.players().len() < settings.player_count as usize {
         return;
