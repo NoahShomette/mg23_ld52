@@ -122,9 +122,9 @@
 		{
 			"__cWid": 6,
 			"__cHei": 5,
-			"identifier": "Small_Better_Enviro_Small_size",
+			"identifier": "Small_Better_Enviro_Small_size2",
 			"uid": 1,
-			"relPath": "../LDtk/Small-Better-Enviro-Small size.png",
+			"relPath": "Small-Better-Enviro-Small size.png",
 			"embedAtlas": null,
 			"pxWid": 96,
 			"pxHei": 80,
@@ -158,10 +158,7 @@
 			"enumTags": [],
 			"customData": [],
 			"savedSelections": [],
-			"cachedPixelData": {
-				"opaqueTiles": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-				"averageColors": "5655566456555664565556645655566456555664464585334645853346458533464585334645853356555664000000000000000000000000000000004645853300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-			}
+			"cachedPixelData": null
 		}
 	], "enums": [], "externalEnums": [], "levelFields": [] },
 	"levels": [
@@ -226,7 +223,7 @@
 					"__pxTotalOffsetX": 0,
 					"__pxTotalOffsetY": 0,
 					"__tilesetDefUid": 1,
-					"__tilesetRelPath": "../LDtk/Small-Better-Enviro-Small size.png",
+					"__tilesetRelPath": "Small-Better-Enviro-Small size.png",
 					"iid": "35e53530-7820-11ed-8ccb-3fed31c82b0e",
 					"levelId": 0,
 					"layerDefUid": 4,
@@ -1012,7 +1009,7 @@
 					"__pxTotalOffsetX": 0,
 					"__pxTotalOffsetY": 0,
 					"__tilesetDefUid": 1,
-					"__tilesetRelPath": "../../../../../Aseprite Art/LD52/Small-Better-Enviro-Small size.png",
+					"__tilesetRelPath": "Small-Better-Enviro-Small size.png",
 					"iid": "344d7e30-7820-11ed-8ccb-0fb4e12069a0",
 					"levelId": 0,
 					"layerDefUid": 3,
