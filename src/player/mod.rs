@@ -4,7 +4,21 @@ use bevy::prelude::{Component, In, Input, KeyCode, Res, Vec2};
 use bevy_ggrs::ggrs::PlayerHandle;
 use crate::camera::CursorWorldPos;
 use crate::player::input::PlayerControls;
+use crate::spell::Spell;
 
+#[derive(Component)]
+pub struct PlayerSpells{
+    pub autoattack: Spell,
+    pub shield: Spell,
+    pub spells: Vec<Spell>,
+
+}
+
+pub enum PlayerActions{
+    Shield,
+    Dash,
+    CastSpell,
+}
 
 #[derive(Component)]
 pub struct Player{

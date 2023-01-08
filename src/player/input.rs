@@ -14,14 +14,15 @@ use crate::player::Player;
             a shield needs the direction its cast in. The mouse position?
  */
 
-//
+
+// the player has autoattacked
 const AUTOATTACK: u32 = 1 << 0;
+// the player has dashed in their move direction
 const DASH: u32 = 1 << 1;
+// the player is shielding in the direction of their mouse
 const SHIELD: u32 = 1 << 2;
-const SPELL_ONE: u32 = 1 << 3;
-const SPELL_TWO: u32 = 1 << 4;
-const SPELL_THREE: u32 = 1 << 5;
-const SPELL_FOUR: u32 = 1 << 6;
+// the player has cast a spell, using the information in their mouse_position
+const CAST_SPELL: u32 = 1 << 3;
 
 
 pub enum SpellType{
@@ -34,7 +35,12 @@ pub enum SpellType{
 #[derive(Pod, Zeroable, Copy, Clone, PartialEq, Reflect, Resource)]
 #[repr(C)]
 pub struct PlayerControls {
+    // the direction the player is requesting to move in
     pub move_direction: Vec2,
+    // The separate and different action_vars the player has, and might be doing
     pub action_vars: u32,
+    // The spell_type that the player has cast, if its not 0
+    pub cast_spell_type: u32,
+    // the mouse position - used for relevant info
     pub mouse_position: Vec2,
 }

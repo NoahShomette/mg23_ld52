@@ -14,16 +14,18 @@ pub struct NetworkPlugin;
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
         // insert basic default matchmaking resource for testing
-        //app.insert_resource(RoomNetworkSettings::default_matchmake_room());
+        app.insert_resource(RoomNetworkSettings::default_matchmake_room());
 
         // insert basic default local matchmaking resource for testing
-        
+        /*
         app.insert_resource(RoomNetworkSettings {
             network_type: MatchmakeType::PrivateRoom(String::from("mg23")),
             ip: "127.0.0.1".to_string(),
             port: "6500".to_string(),
             player_count: 2,
         });
+        
+         */
         
     }
 }
@@ -128,7 +130,7 @@ pub fn start_matchbox_socket(mut commands: Commands, settings: Res<RoomNetworkSe
 
     commands.insert_resource(WrtcSocket {
         socket: Some(socket),
-    });
+    }); 
 }
 
 pub fn wait_for_players(

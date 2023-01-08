@@ -14,6 +14,7 @@ mod assets;
 mod camera;
 mod networking;
 mod player;
+mod spell;
 
 const FPS: usize = 60;
 
@@ -71,13 +72,23 @@ fn main() {
     app.run();
 }
 
+
+/// The game state
+/// 
+/// - AssetLoading starts at the beginning of every time the app is launched, runs all the asset stuff, and then is never used again
+/// - Menu is used for the main menu and associated places
+/// - WaitingForPlayers is the pregame, menu, lobby. Eg, the player selects find match, it goes to 
+///     waiting for players, the player can either quit the matchmaking, or wait to find a match
+/// - BetweenRound is the period between fighting rounds. The players are spawned, the game countdowns till the round starts, the players see the map, etc
+/// - InRound is the actual gameplay. It starts, the players are given control of their characters, and it plays until the round is ended
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
-enum GameState {
+pub enum GameState {
     AssetLoading,
     Menu,
     WaitingForPlayers,
     BetweenRound,
     InRound,
+    PostMatch,
 }
 
 fn spawn_players(
