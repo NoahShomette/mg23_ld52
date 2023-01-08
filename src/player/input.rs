@@ -1,6 +1,8 @@
-﻿use bevy::prelude::{Reflect, Resource, Vec2};
+﻿use bevy::prelude::{In, Input, KeyCode, Reflect, Res, Resource, Vec2};
+use bevy_ggrs::ggrs::PlayerHandle;
 use bytemuck::{Pod, Zeroable};
-use crate::player::Player;
+use crate::camera::CursorWorldPos;
+use crate::player::PlayerId;
 
 // What actions do we need
 
@@ -29,7 +31,7 @@ pub enum SpellType{
     SelfCast,
     Directional(Vec2),
     Location(Vec2),
-    Targeted(Player),
+    Targeted(PlayerId),
 }
 
 #[derive(Pod, Zeroable, Copy, Clone, PartialEq, Reflect, Resource)]
@@ -43,4 +45,37 @@ pub struct PlayerControls {
     pub cast_spell_type: u32,
     // the mouse position - used for relevant info
     pub mouse_position: Vec2,
+}
+
+pub fn input(
+    _: In<PlayerHandle>,
+    keys: Res<Input<KeyCode>>,
+    mouse_pos: Res<CursorWorldPos>,
+) -> PlayerControls {
+    let mut action_vars = 0u32;
+
+    let mut direction = Vec2::ZERO;
+    if keys.any_pressed([KeyCode::Up, KeyCode::W]) {
+        direction.y += 1.;
+    }
+    if keys.any_pressed([KeyCode::Down, KeyCode::S]) {
+        direction.y -= 1.;
+    }
+    if keys.any_pressed([KeyCode::Right, KeyCode::D]) {
+        direction.x += 1.;
+    }
+    if keys.any_pressed([KeyCode::Left, KeyCode::A]) {
+        direction.x -= 1.;
+    }
+
+    if keys.pressed(KeyCode::Space) {
+        //other_actions |= TEST;
+    }
+
+    PlayerControls {
+        move_direction: direction,
+        action_vars,
+        cast_spell_type: 0,
+        mouse_position: mouse_pos.cursor_world_pos,
+    }
 }

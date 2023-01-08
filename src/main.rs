@@ -2,19 +2,21 @@ use crate::assets::Sprites;
 use crate::camera::CamPlugin;
 use crate::networking::ggrs::GGRSConfig;
 use crate::networking::{move_players, NetworkPlugin, start_matchbox_socket, wait_for_players};
-use crate::player::{input, Player};
+use crate::player::{input, PlayerId};
 use bevy::prelude::*;
 use bevy::window::close_on_esc;
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
 use bevy_ggrs::{GGRSPlugin, Rollback, RollbackIdProvider};
 use bevy_tiled_camera::{TiledCameraBundle, TiledCameraPlugin, WorldSpace};
 use iyes_loopless::prelude::{AppLooplessStateExt, IntoConditionalSystem, NextState};
+use crate::player::input::input;
 
 mod assets;
 mod camera;
 mod networking;
 mod player;
 mod spell;
+mod game_state;
 
 const FPS: usize = 60;
 
@@ -114,7 +116,7 @@ fn spawn_players(
             texture: sprites.mageling_green.clone_weak(),
             ..default()
         })
-        .insert(Player { handle: 0 })
+        .insert(PlayerId { handle: 0 })
         .insert(Rollback::new(rip.next_id()));
 
     commands
@@ -135,7 +137,7 @@ fn spawn_players(
             texture: sprites.mageling_green.clone_weak(),
             ..default()
         })
-        .insert(Player { handle: 1 })
+        .insert(PlayerId { handle: 1 })
         .insert(Rollback::new(rip.next_id()));
 
     commands.insert_resource(NextState(GameState::InRound))

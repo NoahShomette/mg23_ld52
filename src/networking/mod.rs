@@ -1,5 +1,5 @@
 ﻿use crate::networking::ggrs::GGRSConfig;
-use crate::{GameState, Player, FPS};
+use crate::{GameState, PlayerId, FPS};
 use bevy::prelude::{info, App, Commands, Plugin, Query, Res, ResMut, Resource, Transform};
 use bevy::tasks::IoTaskPool;
 use bevy_ggrs::ggrs::SessionBuilder;
@@ -181,7 +181,7 @@ pub fn wait_for_players(
 
 pub fn move_players(
     inputs: Res<PlayerInputs<GGRSConfig>>,
-    mut players_query: Query<(&mut Transform, &Player)>,
+    mut players_query: Query<(&mut Transform, &PlayerId)>,
 ) {
     for (mut transform, player) in players_query.iter_mut() {
         let (input, _) = inputs[player.handle];
