@@ -2,8 +2,8 @@
 use crate::physics::Movement;
 use crate::player::input::DASH;
 use crate::player::{MovementState, PlayerId, PlayerMovementState, PlayerMovementStats};
-use bevy::prelude::{info, Entity, Query, Res, Time, Transform};
-use bevy_ggrs::PlayerInputs;
+use bevy::prelude::{info, Entity, Query, Res, Time, Transform, Schedule, IntoSystemDescriptor};
+use bevy_ggrs::{GGRSPlugin, PlayerInputs};
 use bevy_sepax2d::prelude::Movable;
 
 pub fn move_players(
@@ -112,18 +112,3 @@ pub fn update_dash_info(
     }
 }
 
-pub fn velocity_correction_system(mut query: Query<(Entity, &mut Movement, &Movable)>) {
-    // collect and sort for determinism
-    let mut info = query.iter_mut().collect::<Vec<_>>();
-    info.sort_by_key(|x| x.0);
-
-    for (_, mut movement, correction) in info {
-        for (_x, y) in correction.axes.iter() {
-            if y.abs() > f32::EPSILON
-                && movement.velocity.y.is_sign_positive() != y.is_sign_positive()
-            {
-                movement.velocity.y = 0.0;
-            }
-        }
-    }
-}

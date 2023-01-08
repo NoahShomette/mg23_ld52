@@ -562,6 +562,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_aseprite"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a92e3b1abfbd931bdcef76995911ef31f93dedc8877941083a60dba57eee3d2f"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "bevy_aseprite_derive",
+ "bevy_aseprite_reader",
+]
+
+[[package]]
+name = "bevy_aseprite_derive"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f733bd727e2358688ad5a58b9bada8a8b07090246bfff575e0110fc230bb2fc8"
+dependencies = [
+ "bevy_aseprite_reader",
+ "heck",
+ "proc-macro-error",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "bevy_aseprite_reader"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b16a9971d0524be1faba3910e823c837166f25091c2e33cd481a04df87fc840"
+dependencies = [
+ "flate2",
+ "image",
+ "nom",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
 name = "bevy_asset"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -710,6 +748,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_ecs_ldtk"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea8a62e7393a7d84a3136b5560bad7deb870394048eeb770c0e22c2f6553689f"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "bevy_ecs_ldtk_macros",
+ "bevy_ecs_tilemap",
+ "hex",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "bevy_ecs_ldtk_macros"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dd1c6125c28d3c27c35ff1b50cad1e1c59673d75f751085a19dfb3c22ef1908"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "bevy_ecs_macros"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -719,6 +785,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "bevy_ecs_tilemap"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ce7f9fa49f364602ac0901d5f181445529b23fb0623e39e791548f8a6e8c2b5"
+dependencies = [
+ "bevy",
+ "log",
+ "regex",
 ]
 
 [[package]]
@@ -2629,6 +2706,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "heck"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
+
+[[package]]
 name = "hermit-abi"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3121,7 +3204,9 @@ version = "0.1.0"
 dependencies = [
  "benimator",
  "bevy",
+ "bevy_aseprite",
  "bevy_asset_loader",
+ "bevy_ecs_ldtk",
  "bevy_ggrs",
  "bevy_sepax2d",
  "bevy_tiled_camera",
@@ -3752,6 +3837,30 @@ dependencies = [
  "once_cell",
  "thiserror",
  "toml",
+]
+
+[[package]]
+name = "proc-macro-error"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "version_check",
 ]
 
 [[package]]
