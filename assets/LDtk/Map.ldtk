@@ -122,7 +122,7 @@
 		{
 			"__cWid": 6,
 			"__cHei": 5,
-			"identifier": "Small_Better_Enviro_Small_size2",
+			"identifier": "Small_Better_Enviro_Small_size",
 			"uid": 1,
 			"relPath": "Small-Better-Enviro-Small size.png",
 			"embedAtlas": null,
@@ -142,14 +142,14 @@
 			}
 		},
 		{
-			"__cWid": 10,
-			"__cHei": 10,
+			"__cWid": 0,
+			"__cHei": 0,
 			"identifier": "Player_Concepts_FINAL",
 			"uid": 5,
-			"relPath": "../../../../../Aseprite Art/Portmantau/Player-Concepts-FINAL.aseprite",
+			"relPath": null,
 			"embedAtlas": null,
-			"pxWid": 320,
-			"pxHei": 320,
+			"pxWid": 0,
+			"pxHei": 0,
 			"tileGridSize": 32,
 			"spacing": 0,
 			"padding": 0,
@@ -158,10 +158,7 @@
 			"enumTags": [],
 			"customData": [],
 			"savedSelections": [],
-			"cachedPixelData": {
-				"opaqueTiles": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-				"averageColors": "5655566456555664565556645655566456555664464585334645853346458533464585334645853356555664000000000000000000000000000000004645853300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-			}
+			"cachedPixelData": null
 		}
 	], "enums": [], "externalEnums": [], "levelFields": [] },
 	"levels": [
@@ -196,7 +193,7 @@
 					"__pxTotalOffsetX": 0,
 					"__pxTotalOffsetY": 0,
 					"__tilesetDefUid": 5,
-					"__tilesetRelPath": "../../../../../Aseprite Art/Portmantau/Player-Concepts-FINAL.aseprite",
+					"__tilesetRelPath": null,
 					"iid": "07c9f720-7820-11ed-8ccb-fbae3a23413f",
 					"levelId": 0,
 					"layerDefUid": 6,
@@ -211,8 +208,8 @@
 					"gridTiles": [
 						{ "px": [64,32], "src": [0,0], "f": 0, "t": 0, "d": [22] },
 						{ "px": [96,32], "src": [32,0], "f": 0, "t": 1, "d": [23] },
-						{ "px": [64,64], "src": [0,32], "f": 0, "t": 10, "d": [42] },
-						{ "px": [96,64], "src": [32,32], "f": 0, "t": 11, "d": [43] }
+						{ "px": [64,64], "src": [320,0], "f": 0, "t": 10, "d": [42] },
+						{ "px": [96,64], "src": [352,0], "f": 0, "t": 11, "d": [43] }
 					],
 					"entityInstances": []
 				},
