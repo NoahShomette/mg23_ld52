@@ -18,10 +18,10 @@ impl Plugin for NetworkPlugin {
         //app.insert_resource(RoomNetworkSettings::default_matchmake_room());
         
         // insert basic default local matchmaking resource for testing
-        app.insert_resource(RoomNetworkSettings::testing_local());
+        //app.insert_resource(RoomNetworkSettings::testing_local());
 
         //testing online
-        //app.insert_resource(RoomNetworkSettings::testing_ip());
+        app.insert_resource(RoomNetworkSettings::testing_ip());
         
     }
 }
@@ -163,7 +163,7 @@ pub fn wait_for_players(
     socket_ref.accept_new_connections();
     let players = socket_ref.players();
 
-    info!("{}", socket_ref.players().len());
+    //info!("{}", socket_ref.players().len());
 
     if socket_ref.players().len() < settings.player_count as usize {
         return;

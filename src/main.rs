@@ -1,22 +1,25 @@
 use crate::assets::Sprites;
 use crate::camera::CamPlugin;
 use crate::networking::ggrs::GGRSConfig;
-use crate::networking::rollback_systems::{
-    move_players, update_dash_info, velocity_system,
-};
+use crate::networking::rollback_systems::{move_players, update_dash_info, velocity_system};
 use crate::networking::{
     start_matchbox_socket, wait_for_players, NetworkPlugin, RoomNetworkSettings,
 };
-use crate::physics::{clear_correction_system, collision_system, Movement, SepaxCustomPlugin, update_movable_system};
+use crate::physics::{
+    clear_correction_system, collision_system, update_movable_system, Movement, SepaxCustomPlugin,
+};
 use crate::player::input::input;
 use crate::player::{
     MovementState, PlayerBundle, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells,
 };
 use crate::spell::Spell;
+use bevy::prelude::Keyframes::Translation;
 use bevy::prelude::*;
 use bevy::window::close_on_esc;
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
-use bevy_ecs_ldtk::{LdtkPlugin, LdtkWorldBundle, LevelSelection};
+use bevy_ecs_ldtk::{
+    LdtkLevel, LdtkPlugin, LdtkSettings, LdtkWorldBundle, LevelSelection, LevelSpawnBehavior,
+};
 use bevy_ggrs::{GGRSPlugin, Rollback, RollbackIdProvider};
 use bevy_sepax2d::prelude::{Movable, Sepax};
 use bevy_sepax2d::Convex;
@@ -37,11 +40,6 @@ const FPS: usize = 60;
 fn main() {
     let mut app = App::new();
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        app.add_plugin(bevy_web_resizer::Plugin);
-    }
-    
     GGRSPlugin::<GGRSConfig>::new()
         // define frequency of rollback game logic update
         //.with_update_frequency(FPS)
@@ -60,12 +58,10 @@ fn main() {
                     .with_system(move_players)
                     .with_system(velocity_system.after(move_players))
                     .with_system(update_dash_info.after(velocity_system))
-                    
                     // physics stuff - need to be at the end
                     .with_system(clear_correction_system.after(update_dash_info))
                     .with_system(update_movable_system.after(clear_correction_system))
-                    .with_system(collision_system.after(update_movable_system))
-                ,
+                    .with_system(collision_system.after(update_movable_system)),
             ),
         )
         // make it happen in the bevy app
@@ -93,11 +89,14 @@ fn main() {
                 }),
         )
         .add_plugin(TiledCameraPlugin)
-        //.add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.0))
-        //.add_plugin(SepaxCustomPlugin)
+        .insert_resource(LdtkSettings {
+            level_spawn_behavior: LevelSpawnBehavior::UseWorldTranslation {
+                load_level_neighbors: true,
+            },
+            ..default()
+        })
         .add_plugin(LdtkPlugin)
         .insert_resource(LevelSelection::Index(0))
-
         // base systems
         .add_enter_system(GameState::WaitingForPlayers, setup)
         .add_enter_system(GameState::WaitingForPlayers, start_matchbox_socket)
@@ -137,15 +136,17 @@ fn spawn_players(
     sprites: Res<Sprites>,
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
+    mut query: Query<&mut Transform, With<Handle<LdtkLevel>>>,
     asset_server: Res<AssetServer>,
     settings: Res<RoomNetworkSettings>,
 ) {
+    
+    for mut transform in query.iter_mut(){
+        info!("This is called");
+        transform.translation.y -= 180.0;
+        //transform.translation.z -= 50.0;
 
-    commands.spawn(LdtkWorldBundle {
-        ldtk_handle: asset_server.load("LDtk/map.ldtk"),
-        transform: Default::default(),
-        ..Default::default()
-    });
+    }
     
     for i in 0..settings.player_count {
         commands.spawn(PlayerBundle {
@@ -177,7 +178,7 @@ fn spawn_players(
                     translation: Vec3 {
                         x: 0.0,
                         y: 0.0 + (i as f32 * 20.0),
-                        z: 1.0,
+                        z: 30.0,
                     },
                     rotation: Default::default(),
                     scale: Vec3 {
@@ -201,7 +202,7 @@ fn spawn_players(
                 translation: Vec3 {
                     x: 0.0,
                     y: 0.0 + (4 as f32 * 20.0),
-                    z: 1.0,
+                    z: 30.0,
                 },
                 rotation: Default::default(),
                 scale: Vec3 {
@@ -221,14 +222,14 @@ fn spawn_players(
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(LdtkWorldBundle {
         ldtk_handle: asset_server.load("LDtk/map.ldtk"),
-        transform: Default::default(),
-        ..Default::default()
+        level_set: Default::default(),
+        ..default()
     });
 
     commands.spawn(
         TiledCameraBundle::new()
-            .with_pixels_per_tile([24, 24])
-            .with_tile_count([26, 15])
+            .with_pixels_per_tile([16, 16])
+            .with_tile_count([40, 22])
             .with_world_space(WorldSpace::Pixels),
     );
 }
