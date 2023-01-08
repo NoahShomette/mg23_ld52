@@ -4,7 +4,7 @@ on: workflow_dispatch
 
 env:
   # update with the name of the main binary
-  binary: magelings-arcane-harvest
+  binary: mg23
   add_binaries_to_github_release: true
   itch_target: NoahShomette/magelings-arcane-harvest
 
@@ -198,7 +198,7 @@ jobs:
     needs:
       - check-if-upload-to-itch-is-configured
       - release-wasm
-      - release-linux
+      # - release-linux
       - release-windows
       - release-macos
     if: ${{ needs.check-if-upload-to-itch-is-configured.outputs.should-upload == 'yes' }}
