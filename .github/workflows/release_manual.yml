@@ -51,7 +51,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.binary }}.zip
           asset_name: ${{ env.binary }}-wasm-${{ steps.get_version.outputs.tag }}.zip
-          tag: ${{ github.ref }}
+          tag: latest_release # ${{ github.ref }}
           overwrite: true
 
   # Build for Linux
@@ -95,7 +95,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.binary }}.zip
           asset_name: ${{ env.binary }}-linux-${{ steps.get_version.outputs.tag }}.zip
-          tag: ${{ github.ref }}
+          tag: latest_release # ${{ github.ref }}
           overwrite: true
 
   # Build for Windows
@@ -136,7 +136,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.binary }}.zip
           asset_name: ${{ env.binary }}-windows-${{ steps.get_version.outputs.tag }}.zip
-          tag: ${{ github.ref }}
+          tag: latest_release # ${{ github.ref }}
           overwrite: true
 
   # Build for macOS
@@ -178,7 +178,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.binary }}.dmg
           asset_name: ${{ env.binary }}-macos-${{ steps.get_version.outputs.tag }}.dmg
-          tag: ${{ github.ref }}
+          tag: latest_release # ${{ github.ref }}
           overwrite: true
 
   check-if-upload-to-itch-is-configured:
