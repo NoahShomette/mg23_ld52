@@ -25,13 +25,6 @@ pub const SHIELD: u32 = 1 << 2;
 // the player has cast a spell, using the information in their mouse_position
 pub const CAST_SPELL: u32 = 1 << 3;
 
-pub enum SpellType {
-    SelfCast,
-    Directional(Vec2),
-    Location(Vec2),
-    Targeted(PlayerId),
-}
-
 #[derive(Pod, Zeroable, Copy, Clone, PartialEq, Reflect, Resource)]
 #[repr(C)]
 pub struct PlayerControls {
@@ -54,26 +47,56 @@ pub fn input(
     let mut action_vars = 0u32;
 
     let mut direction = Vec2::ZERO;
-    if keys.any_pressed([KeyCode::Up, KeyCode::W]) {
-        direction.y += 1.;
-    }
-    if keys.any_pressed([KeyCode::Down, KeyCode::S]) {
-        direction.y -= 1.;
-    }
-    if keys.any_pressed([KeyCode::Right, KeyCode::D]) {
-        direction.x += 1.;
-    }
-    if keys.any_pressed([KeyCode::Left, KeyCode::A]) {
-        direction.x -= 1.;
-    }
+
 
     for (id, state) in player_movement_query.iter() {
-        if id.handle == player_handle.0
-            && keys.just_pressed(KeyCode::Space)
-            && state.can_dash
-            && state.movement_state == MovementState::Walking
-        {
-            action_vars |= DASH;
+        if id.handle == player_handle.0 {
+            match state.movement_state {
+                MovementState::Dashing { duration, direction } => {
+                    
+                }
+                MovementState::Walking => {
+                    
+                    if keys.any_pressed([KeyCode::Up, KeyCode::W]) {
+                        direction.y += 1.;
+                    }
+                    if keys.any_pressed([KeyCode::Down, KeyCode::S]) {
+                        direction.y -= 1.;
+                    }
+                    if keys.any_pressed([KeyCode::Right, KeyCode::D]) {
+                        direction.x += 1.;
+                    }
+                    if keys.any_pressed([KeyCode::Left, KeyCode::A]) {
+                        direction.x -= 1.;
+                    }
+                    
+                    if keys.just_pressed(KeyCode::Space)
+                        && state.can_dash
+                    {
+                        action_vars |= DASH;
+                    }
+                }
+                MovementState::Idle => {
+                    if keys.any_pressed([KeyCode::Up, KeyCode::W]) {
+                        direction.y += 1.;
+                    }
+                    if keys.any_pressed([KeyCode::Down, KeyCode::S]) {
+                        direction.y -= 1.;
+                    }
+                    if keys.any_pressed([KeyCode::Right, KeyCode::D]) {
+                        direction.x += 1.;
+                    }
+                    if keys.any_pressed([KeyCode::Left, KeyCode::A]) {
+                        direction.x -= 1.;
+                    }
+                    
+                    if keys.just_pressed(KeyCode::Space)
+                        && state.can_dash
+                    {
+                        action_vars |= DASH;
+                    }
+                }
+            }
         }
     }
     PlayerControls {

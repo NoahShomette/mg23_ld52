@@ -1,5 +1,6 @@
-﻿use bevy::prelude::{App, Camera, Commands, GlobalTransform, Plugin, Query, Res, ResMut, Resource, Vec2, Windows};
+﻿use bevy::prelude::{App, Bundle, Camera, Color, Commands, Component, Entity, EventReader, GlobalTransform, Plugin, Query, Res, ResMut, Resource, Vec2, Windows, With};
 use bevy::render::camera::RenderTarget;
+use bevy::window::WindowResized;
 use bevy_tiled_camera::{TiledCameraBundle, WorldSpace};
 use iyes_loopless::prelude::{AppLooplessStateExt, IntoConditionalSystem};
 use crate::GameState;
@@ -11,6 +12,7 @@ impl Plugin for CamPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<CursorWorldPos>()
+            .add_system(camera_resizer)
             .add_system( update_cursor_world_pos.run_in_state(GameState::BetweenRound))
             .add_system( update_cursor_world_pos.run_in_state(GameState::InRound));
 
@@ -22,16 +24,40 @@ pub struct CursorWorldPos {
     pub cursor_world_pos: Vec2,
 }
 
+#[derive(PartialEq, Clone, Copy, Debug, Default, Component)]
+pub struct CameraMarker;
 
-fn setup(
+#[derive(Bundle)]
+pub struct CameraBundle{
+    tiled_camera: TiledCameraBundle,
+    camera: CameraMarker,
+}
+
+impl Default for CameraBundle{
+    fn default() -> Self {
+        CameraBundle{
+            tiled_camera: TiledCameraBundle::new()
+                .with_pixels_per_tile([16, 18])
+                .with_tile_count([40, 20])
+                .with_world_space(WorldSpace::Pixels)
+                .with_clear_color(Color::BLACK),
+            camera: Default::default(),
+        }
+        
+    }
+}
+
+fn camera_resizer(
     mut commands: Commands,
+    cam_query: Query<Entity, With<CameraMarker>>,
+    mut window_resized_event: EventReader<WindowResized>,
 ) {
-    commands.spawn(
-        TiledCameraBundle::new()
-            .with_pixels_per_tile([24, 24])
-            .with_tile_count([26, 15])
-            .with_world_space(WorldSpace::Pixels),
-    );
+    for event in window_resized_event.iter(){
+        for cam_entity in cam_query.iter(){
+            commands.entity(cam_entity).despawn();
+            commands.spawn(CameraBundle::default());
+        }
+    }
 }
 
 fn update_cursor_world_pos(

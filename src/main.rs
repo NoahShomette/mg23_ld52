@@ -1,31 +1,28 @@
-use crate::assets::Sprites;
-use crate::camera::CamPlugin;
+use crate::assets::{SpellSprites, Sprites};
+use crate::camera::{CamPlugin, CameraBundle};
 use crate::networking::ggrs::GGRSConfig;
 use crate::networking::rollback_systems::{move_players, update_dash_info, velocity_system};
 use crate::networking::{
     start_matchbox_socket, wait_for_players, NetworkPlugin, RoomNetworkSettings,
 };
-use crate::physics::{
-    clear_correction_system, collision_system, update_movable_system, Movement, SepaxCustomPlugin,
-};
+use crate::physics::{clear_correction_system, collision_system, update_movable_system, Movement};
 use crate::player::input::input;
-use crate::player::{
-    MovementState, PlayerBundle, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells,
-};
-use crate::spell::Spell;
-use bevy::prelude::Keyframes::Translation;
+use crate::player::{Health, MovementState, PlayerBundle, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells};
+use crate::spell::{SpellCastInfo, SpellType, SpellProjectileInfo, GameSpells};
 use bevy::prelude::*;
 use bevy::window::close_on_esc;
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
 use bevy_ecs_ldtk::{
     LdtkLevel, LdtkPlugin, LdtkSettings, LdtkWorldBundle, LevelSelection, LevelSpawnBehavior,
 };
+use bevy_ecs_ldtk::prelude::RegisterLdtkObjects;
 use bevy_ggrs::{GGRSPlugin, Rollback, RollbackIdProvider};
 use bevy_sepax2d::prelude::{Movable, Sepax};
 use bevy_sepax2d::Convex;
-use bevy_tiled_camera::{TiledCameraBundle, TiledCameraPlugin, WorldSpace};
+use bevy_tiled_camera::TiledCameraPlugin;
 use iyes_loopless::prelude::{AppLooplessStateExt, IntoConditionalSystem, NextState};
 use sepax2d::prelude::AABB;
+use crate::map::WallCollisions;
 
 mod assets;
 mod camera;
@@ -34,6 +31,7 @@ mod networking;
 mod physics;
 mod player;
 mod spell;
+mod map;
 
 const FPS: usize = 60;
 
@@ -48,8 +46,11 @@ fn main() {
         // register types of components AND resources you want to be rolled back
         .register_rollback_component::<Transform>()
         .register_rollback_component::<Movement>()
+        .register_rollback_component::<Health>()
         .register_rollback_component::<PlayerMovementStats>()
         .register_rollback_component::<PlayerMovementState>()
+        //resources
+        .register_rollback_resource::<GameSpells>()
         // these systems will be executed as part of the advance frame update
         .with_rollback_schedule(
             Schedule::default().with_stage(
@@ -71,15 +72,18 @@ fn main() {
         .add_loading_state(
             LoadingState::new(GameState::AssetLoading)
                 .continue_to_state(GameState::WaitingForPlayers)
-                .with_collection::<Sprites>(),
+                .with_collection::<Sprites>()
+                .with_collection::<SpellSprites>(),
         )
         .add_state(GameState::AssetLoading)
         //base plugins
+        .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(
             DefaultPlugins
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     window: WindowDescriptor {
+                        title: "Magelings".to_string(),
                         position: WindowPosition::Automatic,
                         fit_canvas_to_parent: true,
                         canvas: Some("#bevy".to_string()),
@@ -96,6 +100,8 @@ fn main() {
             ..default()
         })
         .add_plugin(LdtkPlugin)
+        .register_ldtk_int_cell::<WallCollisions>(1)
+
         .insert_resource(LevelSelection::Index(0))
         // base systems
         .add_enter_system(GameState::WaitingForPlayers, setup)
@@ -134,39 +140,49 @@ pub enum GameState {
 
 fn spawn_players(
     sprites: Res<Sprites>,
+    spell_sprites: Res<SpellSprites>,
+
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
     mut query: Query<&mut Transform, With<Handle<LdtkLevel>>>,
     asset_server: Res<AssetServer>,
     settings: Res<RoomNetworkSettings>,
 ) {
-    
-    for mut transform in query.iter_mut(){
+    for mut transform in query.iter_mut() {
         info!("This is called");
         transform.translation.y -= 180.0;
         //transform.translation.z -= 50.0;
-
     }
-    
+
     for i in 0..settings.player_count {
         commands.spawn(PlayerBundle {
             player_id: PlayerId { handle: i as usize },
             rollback_id: Rollback::new(rip.next_id()),
             player_spells: PlayerSpells {
-                autoattack: Spell {},
-                shield: Spell {},
+                autoattack: SpellCastInfo {
+                    spell_type: SpellType::SelfCast,
+                    cooldown: 0.0,
+                    cast_spell: SpellProjectileInfo {
+                        id: 0
+                    },
+                    spell_indicator: spell_sprites.circle_indicator.clone_weak(),
+                },
                 spells: vec![],
             },
             player_movement: PlayerMovementStats {
-                speed: 100.0,
+                speed: 130.0,
                 dash_power: 3.0,
                 dash_duration: 0.2,
-                dash_cooldown_length: 2.0,
-                dash_cooldown: 0.0,
+                dash_cooldown_length: 5.0,
             },
             player_movement_state: PlayerMovementState {
-                can_dash: false,
+                can_dash: true,
+                dash_cooldown: 0.0,
                 movement_state: MovementState::default(),
+            },
+            health: Health{
+                max_health: 100,
+                current_health: 100,
             },
             sepax: Sepax {
                 convex: Convex::AABB(AABB::new((0.0, 0.0 + (i as f32 * 20.0)), 20.0, 20.0)),
@@ -221,15 +237,10 @@ fn spawn_players(
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(LdtkWorldBundle {
-        ldtk_handle: asset_server.load("LDtk/map.ldtk"),
+        ldtk_handle: asset_server.load("ldtk/map.ldtk"),
         level_set: Default::default(),
         ..default()
     });
 
-    commands.spawn(
-        TiledCameraBundle::new()
-            .with_pixels_per_tile([16, 16])
-            .with_tile_count([40, 22])
-            .with_world_space(WorldSpace::Pixels),
-    );
+    commands.spawn(CameraBundle::default());
 }

@@ -2,9 +2,10 @@
 use crate::physics::Movement;
 use crate::player::input::DASH;
 use crate::player::{MovementState, PlayerId, PlayerMovementState, PlayerMovementStats};
-use bevy::prelude::{info, Entity, Query, Res, Time, Transform, Schedule, IntoSystemDescriptor};
+use bevy::prelude::{info, Entity, IntoSystemDescriptor, Query, Res, Schedule, Time, Transform};
 use bevy_ggrs::{GGRSPlugin, PlayerInputs};
 use bevy_sepax2d::prelude::Movable;
+use std::ops::Deref;
 
 pub fn move_players(
     inputs: Res<PlayerInputs<GGRSConfig>>,
@@ -24,18 +25,20 @@ pub fn move_players(
         let (input, _) = inputs[player.handle];
 
         let move_delta = input.move_direction;
-        
+
         if input.action_vars & DASH != 0 {
-            player_movement.movement_state = MovementState::Dashing { duration: 0.0 };
+            player_movement.movement_state = MovementState::Dashing {
+                duration: 0.0,
+                direction: move_delta.normalize_or_zero(),
+            };
             player_movement.can_dash = false;
         }
-        
-        if move_delta.normalize().is_nan(){
+
+        if move_delta.normalize().is_nan() {
             //player_movement.movement_state = MovementState::Idle;
         }
-        
-        movement.velocity = move_delta.normalize_or_zero();
 
+        movement.velocity = move_delta.normalize_or_zero();
     }
 }
 
@@ -55,25 +58,31 @@ pub fn velocity_system(
 
     for (_, mut movement, stats, mut state, mut transform) in info {
         let mut movement_speed = stats.speed;
-        
-        match state.movement_state{
-            MovementState::Dashing { .. } => {
+
+        match state.movement_state {
+            MovementState::Dashing {
+                duration,
+                direction,
+            } => {
                 movement_speed = movement_speed * stats.dash_power;
-                transform.translation.x += (movement.velocity.x * movement_speed) * time.delta_seconds();
-                transform.translation.y += (movement.velocity.y * movement_speed) * time.delta_seconds();
+                transform.translation.x += (direction.x * movement_speed) * time.delta_seconds();
+                transform.translation.y += (direction.y * movement_speed) * time.delta_seconds();
             }
             MovementState::Walking => {
-                transform.translation.x += (movement.velocity.x * movement_speed) * time.delta_seconds();
-                transform.translation.y += (movement.velocity.y * movement_speed) * time.delta_seconds();
+                transform.translation.x +=
+                    (movement.velocity.x * movement_speed) * time.delta_seconds();
+                transform.translation.y +=
+                    (movement.velocity.y * movement_speed) * time.delta_seconds();
             }
             MovementState::Idle => {
-                transform.translation.x += (movement.velocity.x * movement_speed) * time.delta_seconds();
-                transform.translation.y += (movement.velocity.y * movement_speed) * time.delta_seconds();
+                transform.translation.x +=
+                    (movement.velocity.x * movement_speed) * time.delta_seconds();
+                transform.translation.y +=
+                    (movement.velocity.y * movement_speed) * time.delta_seconds();
                 //movement.velocity.x *= movement.damping.powf(time.delta_seconds());
                 //movement.velocity.y *= movement.damping.powf(time.delta_seconds());
             }
         }
-
     }
 }
 
@@ -93,22 +102,29 @@ pub fn update_dash_info(
 
     for (_, movement, mut stats, mut state, mut transform) in info {
         match state.movement_state {
-            MovementState::Dashing { mut duration } => {
+            MovementState::Dashing {
+                mut duration,
+                direction,
+            } => {
                 duration += time.delta_seconds();
                 if duration >= stats.dash_duration {
                     state.movement_state = MovementState::Walking;
-                }else{
-                    state.movement_state = MovementState::Dashing {duration};
+                } else {
+                    state.movement_state = MovementState::Dashing {
+                        duration,
+                        direction,
+                    };
                 }
             }
             _ => {
-                if stats.dash_cooldown_length < stats.dash_cooldown{
-                    stats.dash_cooldown += time.delta_seconds();
-                }else{
+                if stats.dash_cooldown_length < state.dash_cooldown {
+                    state.dash_cooldown += time.delta_seconds();
+                    state.can_dash = false;
+                } else {
                     state.can_dash = true;
+                    state.dash_cooldown = 0.0;
                 }
             }
         }
     }
 }
-

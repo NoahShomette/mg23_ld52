@@ -22,8 +22,7 @@ bevy = { version = "0.9.1", default-features = false, features = [
     "png",
     "hdr",
     "wav",
-    "x11",
-    "filesystem_watcher", ] }
+    "x11", ] }
 bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs" }
 matchbox_socket = { git = "https://github.com/NoahShomette/matchbox", features = ["ggrs-socket"] }
 bevy_asset_loader = { version = "0.14.1", features = ["stageless"] }
@@ -39,4 +38,4 @@ bevy_sepax2d = "0.4.1"
 sepax2d = "0.3.8"
 bevy_ecs_ldtk = "0.5.0"
 bevy_aseprite = "0.9"
-wasm-bindgen = "0.2.83"
+# wasm-bindgen = "0.2.83"
