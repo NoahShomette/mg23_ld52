@@ -1,5 +1,6 @@
 ﻿use crate::player::{PlayerId, TeamId};
 use bevy::asset::{AssetServer, Assets, Handle};
+use bevy::log::info;
 use bevy::prelude::{Bundle, Component, IVec2, Image, TextureAtlas, TransformBundle, FromReflect, Reflect};
 use bevy_ecs_ldtk::ldtk::{FieldInstance, LayerInstance, TilesetDefinition};
 use bevy_ecs_ldtk::prelude::LdtkEntity;
@@ -57,8 +58,6 @@ impl LdtkEntity for SpawnPointBundle {
         asset_server: &AssetServer,
         texture_atlases: &mut Assets<TextureAtlas>,
     ) -> Self {
-        let coords = entity_instance.grid;
-
         let team_id = match &entity_instance.field_instances[0] {
             FieldInstance {
                 identifier,
@@ -68,6 +67,7 @@ impl LdtkEntity for SpawnPointBundle {
                 def_uid,
                 real_editor_values,
             } => {
+                info!("{:?}", field_instance_type);
                 if field_instance_type == "Team0" {
                     TeamId { id: 0 }
                 } else {

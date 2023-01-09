@@ -1,10 +1,7 @@
 ﻿use crate::networking::ggrs::GGRSConfig;
 use crate::physics::Movement;
 use crate::player::input::{CAST_SPELL, DASH};
-use crate::player::{
-    MovementState, PlayerCombatState, PlayerId, PlayerMovementState, PlayerMovementStats,
-    PlayerSpellBuffer, PlayerSpells, SpellAction, SpellCastState,
-};
+use crate::player::{MovementState, PlayerCombatState, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpellBuffer, PlayerSpells, SpellAction, SpellCastState, TeamId};
 use crate::spell::{DamageDealer, DamageSpellProjectileBundle, SpellAnimation, SpellCasterId, SpellId, SpellLifetime};
 use bevy::log::info;
 use bevy::prelude::{
@@ -18,6 +15,7 @@ use bevy_sepax2d::Convex;
 use sepax2d::prelude::Circle;
 use sepax2d::sat_overlap;
 use crate::assets::SpellSprites;
+use crate::map::{SpawnPoint, Wall};
 
 pub fn handle_spell_casts(
     inputs: Res<PlayerInputs<GGRSConfig>>,
@@ -60,7 +58,7 @@ pub fn handle_spell_casts(
                         translation: input.mouse_position.extend(20.0),
                         ..default()
                     },
-                    animation: AsepriteAnimation::from("Indicator"),
+                    animation: AsepriteAnimation::from("Explosion"),
                     aseprite: game_spells.explosion_spell.clone(),
                     ..default()
                 },
@@ -92,21 +90,37 @@ pub fn update_spell_lifetimes(
                 commands.entity(entity).despawn();
             }
         }
-
     }
 }
 
 pub fn spell_collision_system(
     mut commands: Commands,
     spells: Query<(Entity, &Sepax, &SpellCasterId), (With<SpellId>, Without<PlayerId>)>,
-    players: Query<(Entity, &Sepax, &PlayerId), (With<PlayerId>, Without<SpellId>)>,
+    mut players: Query<(Entity, &Sepax, &PlayerId, &TeamId, &mut Transform), (With<PlayerId>, Without<SpellId>)>,
+    mut spawn_points: Query<(&mut Transform, &SpawnPoint), Without<PlayerId>>,
+
 ) {
+
+    // collect and sort for determinism
+    let mut info = spawn_points.iter_mut().collect::<Vec<_>>();
+    info.sort_by_key(|x| x.1);
+
+    let mut spawn_points = vec![];
+
+    for (transform, spawn_point) in info {
+        spawn_points.push((transform.translation, spawn_point.0));
+    }
+    
     for (spell, spell_sepax, spell_caster_id) in spells.iter() {
-        for (enemy, enemy_sepax, player_id) in players.iter() {
+        for (enemy, enemy_sepax, player_id, team_id, mut transform) in players.iter_mut() {
             if spell_caster_id.id.handle != player_id.handle {
                 info!("overlapped enemy");
                 if sat_overlap(enemy_sepax.shape(), spell_sepax.shape()) {
-                    commands.entity(enemy).despawn();
+                    for spawn_point in spawn_points.clone(){
+                        if spawn_point.1.id == team_id.id{
+                            transform.translation = spawn_point.0;
+                        }
+                    }
                 }
             }
         }

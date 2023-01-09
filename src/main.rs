@@ -1,7 +1,7 @@
 use crate::assets::{MenuSprites, SpellSprites, Sprites};
 use crate::camera::{CamPlugin, CameraBundle};
 use crate::combat::handle_spell_buffer;
-use crate::map::{SpawnPoint, Wall, WallCollisions};
+use crate::map::{SpawnPoint, SpawnPointBundle, Wall, WallCollisions};
 use crate::networking::ggrs::GGRSConfig;
 use crate::networking::rollback_systems::{
     handle_spell_casts, move_players, spell_collision_system, update_dash_info,
@@ -117,6 +117,7 @@ fn main() {
                         position: WindowPosition::Automatic,
                         fit_canvas_to_parent: true,
                         canvas: Some("#bevy".to_string()),
+                        mode: WindowMode::Fullscreen,
                         ..default()
                     },
                     ..default()
@@ -131,6 +132,8 @@ fn main() {
         })
         .add_plugin(LdtkPlugin)
         .register_ldtk_entity::<WallCollisions>("Wall")
+        .register_ldtk_entity::<SpawnPointBundle>("SpawnPoint")
+
         .insert_resource(LevelSelection::Index(0))
         .add_plugin(Material2dPlugin::<OutlineAndTextureMaterial>::default())
         .add_plugin(AsepritePlugin)
@@ -193,11 +196,11 @@ fn spawn_players(
 
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
-    mut query: Query<&mut Transform, (With<Handle<LdtkLevel>>, Without<Wall>)>,
-    mut wall_query: Query<&mut Transform, With<Wall>>,
+    mut query: Query<&mut Transform, (With<Handle<LdtkLevel>>, Without<Wall>, Without<SpawnPoint>)>,
+    mut wall_query: Query<&mut Transform, (With<Wall>, Without<SpawnPoint>)>,
     asset_server: Res<AssetServer>,
     settings: Res<RoomNetworkSettings>,
-    mut spawn_points: Query<(&mut Transform, &SpawnPoint)>,
+    mut spawn_points: Query<(&mut Transform, &SpawnPoint), (Without<Wall>)>,
 ) {
     for mut transform in query.iter_mut() {
         info!("This is called");
@@ -211,9 +214,9 @@ fn spawn_players(
     // collect and sort for determinism
     let mut info = spawn_points.iter_mut().collect::<Vec<_>>();
     info.sort_by_key(|x| x.1);
-    
+
     let mut spawn_points = vec![];
-    
+
     for (mut transform, spawn_point) in info {
         transform.translation.y -= 180.0;
         transform.translation.x -= 320.0;
@@ -280,56 +283,6 @@ fn spawn_players(
             animation_state: AnimationState::Idle,
         });
     }
-
-    commands.spawn((
-        Sepax {
-            convex: Convex::AABB(AABB::new((0.0, 0.0 + (4 as f32 * 20.0)), 20.0, 20.0)),
-        },
-        SpriteBundle {
-            transform: Transform {
-                translation: Vec3 {
-                    x: 0.0,
-                    y: 0.0 + (4 as f32 * 20.0),
-                    z: 30.0,
-                },
-                rotation: Default::default(),
-                scale: Vec3 {
-                    x: 1.0,
-                    y: 1.0,
-                    z: 1.0,
-                },
-            },
-            texture: sprites.mageling_green.clone_weak(),
-            ..default()
-        },
-    ));
-
-    commands.spawn((
-        Sepax {
-            convex: Convex::AABB(AABB::new((0.0, 0.0 - (4 as f32 * 20.0)), 20.0, 20.0)),
-        },
-        SpriteBundle {
-            transform: Transform {
-                translation: Vec3 {
-                    x: 0.0,
-                    y: 0.0 - (4 as f32 * 20.0),
-                    z: 30.0,
-                },
-                rotation: Default::default(),
-                scale: Vec3 {
-                    x: 1.0,
-                    y: 1.0,
-                    z: 1.0,
-                },
-            },
-            texture: sprites.mageling_green.clone_weak(),
-            sprite: Sprite {
-                color: Color::RED,
-                ..default()
-            },
-            ..default()
-        },
-    ));
 
     commands.insert_resource(NextState(GameState::InRound))
 }
