@@ -1,16 +1,15 @@
 ﻿use crate::camera::CursorWorldPos;
-use crate::player::{
-    LocalPlayer, PlayerCombatState, PlayerId, PlayerMovementState, PlayerSpells, SpellCastState,
-};
+use crate::player::{AnimationState, LocalPlayer, PlayerCombatState, PlayerId, PlayerMovementState, PlayerSpells, SpellCastState};
 use bevy::app::App;
 use bevy::prelude::{
-    Commands, Component, Entity, FromReflect, Handle, Image, In, Local, Plugin, Query, Reflect,
-    Res, Resource, Transform, Vec2,
+    Bundle, Commands, Component, Entity, FromReflect, Handle, Image, In, Local, Plugin, Query,
+    Reflect, Res, Resource, Transform, Vec2,
 };
 use bevy::sprite::SpriteBundle;
 use bevy::utils::{default, HashMap};
-use bevy_sepax2d::components::Sepax;
 use bevy_aseprite::AsepriteBundle;
+use bevy_ggrs::Rollback;
+use bevy_sepax2d::components::Sepax;
 use bevy_sepax2d::prelude::Movable;
 
 pub struct SpellPlugin;
@@ -84,14 +83,20 @@ pub struct GameSpells {
     pub spell_cast_info: HashMap<u32, SpellCastInfo>,
 }
 
-#[derive(Component)]
+#[derive(Bundle)]
 pub struct DamageSpellProjectileBundle {
-    pub(crate) sepax: Sepax,
-    pub(crate) damage: DamageDealer,
-    pub(crate) spell_caster_id: SpellCasterId,
-    pub(crate) spell_lifetime: SpellLifetime,
+    pub sepax: Sepax,
+    pub damage: DamageDealer,
+    pub spell_id: SpellId,
+    pub spell_caster_id: SpellCasterId,
+    pub spell_lifetime: SpellLifetime,
     pub aseprite_bundle: AsepriteBundle,
-    pub movable: Movable,
+    pub animation_state: SpellAnimation,
+    pub rollback_id: Rollback,
+}
+
+impl DamageSpellProjectileBundle {
+    fn spawn_spell() {}
 }
 
 /// The cast type of the spell
@@ -123,7 +128,11 @@ pub struct SpellId {
 /// A struct holding the id of the spell
 #[derive(FromReflect, Reflect, Default, PartialEq, Debug, PartialOrd, Clone, Component)]
 pub struct SpellLifetime {
-    pub current_lifetime: usize,
+    pub max_cast_delay: f32,
+    pub current_cast_delay: f32,
+    /// Not used rn but keep for future.
+    pub max_cast_frame: usize,
+    pub max_explosion_frame: usize,
 }
 
 /// The id of the player who cast the spell
@@ -136,4 +145,12 @@ pub struct SpellCasterId {
 #[derive(FromReflect, Reflect, Eq, PartialEq, Debug, PartialOrd, Ord, Clone, Component)]
 pub struct DamageDealer {
     pub damage_amount: u32,
+}
+
+#[derive(FromReflect, Reflect, Eq, PartialEq, Debug, PartialOrd, Ord, Clone, Component)]
+pub enum SpellAnimation {
+    Indicator,
+    CastDelay,
+    Cast,
+    PostCast,
 }

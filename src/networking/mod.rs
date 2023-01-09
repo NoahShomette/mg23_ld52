@@ -1,10 +1,10 @@
 ﻿use crate::networking::ggrs::GGRSConfig;
-use crate::{GameState, FPS};
+use crate::{spawn_players, GameState, FPS};
 use bevy::prelude::{info, App, Commands, Plugin, Res, ResMut, Resource};
 use bevy::tasks::IoTaskPool;
 use bevy_ggrs::ggrs::SessionBuilder;
-use bevy_ggrs::{Session};
-use iyes_loopless::prelude::NextState;
+use bevy_ggrs::Session;
+use iyes_loopless::prelude::{AppLooplessStateExt, IntoConditionalSystem, NextState};
 use matchbox_socket::WebRtcSocket;
 
 pub mod ggrs;
@@ -14,15 +14,16 @@ pub struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
+        app.add_system(wait_for_players.run_in_state(GameState::WaitingForPlayers))
+            .add_enter_system(GameState::WaitingForPlayers, start_matchbox_socket);
         // insert basic default matchmaking resource for testing
         //app.insert_resource(RoomNetworkSettings::default_matchmake_room());
-        
+
         // insert basic default local matchmaking resource for testing
         app.insert_resource(RoomNetworkSettings::testing_local());
 
         //testing online
         //app.insert_resource(RoomNetworkSettings::testing_ip());
-        
     }
 }
 
@@ -62,8 +63,8 @@ impl RoomNetworkSettings {
             player_count,
         }
     }
-    
-    fn testing_ip() -> Self {
+
+    pub fn testing_ip() -> Self {
         RoomNetworkSettings {
             network_type: MatchmakeType::Matchmake,
             ip: "172.124.208.194".to_string(),
@@ -72,7 +73,7 @@ impl RoomNetworkSettings {
         }
     }
 
-    fn testing_local() -> Self {
+    pub fn testing_local() -> Self {
         RoomNetworkSettings {
             network_type: MatchmakeType::Matchmake,
             ip: "127.0.0.1".to_string(),
@@ -80,7 +81,6 @@ impl RoomNetworkSettings {
             player_count: 2,
         }
     }
-    
 }
 
 /// Default is a local room
@@ -145,7 +145,7 @@ pub fn start_matchbox_socket(mut commands: Commands, settings: Res<RoomNetworkSe
 
     commands.insert_resource(WrtcSocket {
         socket: Some(socket),
-    }); 
+    });
 }
 
 pub fn wait_for_players(

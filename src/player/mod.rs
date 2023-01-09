@@ -1,7 +1,7 @@
 ﻿pub(crate) mod input;
 
 use crate::physics::Movement;
-use crate::spell::{SpellCastInfo};
+use crate::spell::{SpellCastInfo, SpellId};
 use bevy::math::Vec2;
 use bevy::prelude::{Bundle, Component, FromReflect, Query, Reflect, Resource, With};
 use bevy_aseprite::anim::AsepriteAnimation;
@@ -90,6 +90,15 @@ pub enum SpellCastState {
     },
     Cast,
 }
+
+#[derive(Reflect, Default, Resource, Debug, PartialEq)]
+pub struct PlayerSpellBuffer{
+    pub handle_id: usize,
+    pub actions: Vec<SpellAction>,
+}
+
+#[derive(FromReflect, Reflect, Default, Debug, PartialEq)]
+pub struct SpellAction(pub SpellId, pub Vec2);
 
 #[derive(Reflect, Default, Component, Debug, Copy, Clone, PartialEq)]
 pub struct PlayerMovementState {

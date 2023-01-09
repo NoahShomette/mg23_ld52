@@ -1,8 +1,12 @@
-use crate::assets::{SpellSprites, Sprites};
+use crate::assets::{MenuSprites, SpellSprites, Sprites};
 use crate::camera::{CamPlugin, CameraBundle};
-use crate::map::{Wall, WallCollisions};
+use crate::combat::handle_spell_buffer;
+use crate::map::{SpawnPoint, Wall, WallCollisions};
 use crate::networking::ggrs::GGRSConfig;
-use crate::networking::rollback_systems::{handle_spell_casts, move_players, spell_collision_system, update_dash_info, update_spell_lifetimes, velocity_system};
+use crate::networking::rollback_systems::{
+    handle_spell_casts, move_players, spell_collision_system, update_dash_info,
+    update_spell_lifetimes, velocity_system,
+};
 use crate::networking::{
     start_matchbox_socket, wait_for_players, NetworkPlugin, RoomNetworkSettings,
 };
@@ -12,9 +16,14 @@ use crate::physics::{
 use crate::player::input::input;
 use crate::player::{
     update_animation_state, AnimationState, Health, LocalPlayer, MovementState, PlayerBundle,
-    PlayerCombatState, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells, TeamId,
+    PlayerCombatState, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpellBuffer,
+    PlayerSpells, TeamId,
 };
-use crate::spell::{GameSpells, SpellCastInfo, SpellPlugin, SpellType};
+use crate::spell::{
+    DamageDealer, DamageSpellProjectileBundle, GameSpells, SpellCastInfo, SpellCasterId,
+    SpellLifetime, SpellPlugin, SpellType,
+};
+use crate::ui::UiPlugin;
 use bevy::prelude::*;
 use bevy::sprite::Material2dPlugin;
 use bevy::window::close_on_esc;
@@ -30,18 +39,19 @@ use bevy_sepax2d::prelude::{Movable, Sepax};
 use bevy_sepax2d::Convex;
 use bevy_simple_2d_outline::OutlineAndTextureMaterial;
 use bevy_tiled_camera::TiledCameraPlugin;
-use iyes_loopless::prelude::{AppLooplessStateExt, IntoConditionalSystem, NextState};
-use sepax2d::prelude::AABB;
+use iyes_loopless::prelude::{AppLooplessStateExt, ConditionSet, IntoConditionalSystem, NextState};
+use sepax2d::prelude::{Circle, AABB};
 
 mod assets;
 mod camera;
+mod combat;
 mod game_state;
 mod map;
 mod networking;
 mod physics;
 mod player;
 mod spell;
-mod combat;
+mod ui;
 
 const FPS: usize = 60;
 
@@ -53,7 +63,6 @@ fn main() {
         .with_update_frequency(FPS)
         // define system that returns inputs given a player handle, so GGRS can send the inputs around
         .with_input_system(input)
-        
         // register types of components AND resources you want to be rolled back
         .register_rollback_component::<Transform>()
         .register_rollback_component::<Movement>()
@@ -62,9 +71,11 @@ fn main() {
         .register_rollback_component::<PlayerMovementState>()
         .register_rollback_component::<AnimationState>()
         .register_rollback_component::<PlayerCombatState>()
+        .register_rollback_component::<SpellLifetime>()
         //.register_rollback_component::<PlayerCombatState>()
         //resources
-        .register_rollback_resource::<GameSpells>()
+        .register_rollback_resource::<PlayerSpellBuffer>()
+        //.register_rollback_resource::<NetworkIdProvider>()
         // these systems will be executed as part of the advance frame update
         .with_rollback_schedule(
             Schedule::default().with_stage(
@@ -79,9 +90,7 @@ fn main() {
                     .with_system(update_movable_system.after(clear_correction_system))
                     .with_system(update_walls_system.after(update_movable_system))
                     .with_system(collision_system.after(update_walls_system))
-                    
-                    .with_system(spell_collision_system.after(collision_system))
-                    .with_system(update_spell_lifetimes.after(spell_collision_system)),
+                    .with_system(spell_collision_system.after(collision_system)),
             ),
         )
         // make it happen in the bevy app
@@ -90,9 +99,10 @@ fn main() {
     app.add_loopless_state(GameState::AssetLoading)
         .add_loading_state(
             LoadingState::new(GameState::AssetLoading)
-                .continue_to_state(GameState::WaitingForPlayers)
+                .continue_to_state(GameState::Menu)
                 .with_collection::<Sprites>()
-                .with_collection::<SpellSprites>(),
+                .with_collection::<SpellSprites>()
+                .with_collection::<MenuSprites>(),
         )
         .add_state(GameState::AssetLoading)
         //base plugins
@@ -125,18 +135,32 @@ fn main() {
         .add_plugin(Material2dPlugin::<OutlineAndTextureMaterial>::default())
         .add_plugin(AsepritePlugin)
         // base systems
-        .add_enter_system(GameState::WaitingForPlayers, setup)
-        .add_enter_system(GameState::WaitingForPlayers, start_matchbox_socket)
-        .add_system(wait_for_players.run_in_state(GameState::WaitingForPlayers))
+        .add_system_set(
+            ConditionSet::new()
+                // all the conditions, and any labels/ordering
+                // must be added before adding the systems
+                // (helps avoid confusion and accidents)
+                // (makes it clear they apply to all systems in the set)
+                .run_in_state(GameState::InRound)
+                .label("thing2")
+                //.after("stuff")
+                .with_system(handle_spell_buffer)
+                .with_system(update_spell_lifetimes)
+                .into(),
+        )
+        .add_enter_system(GameState::Menu, setup)
         .add_enter_system(GameState::BetweenRound, spawn_players)
-        .add_system(update_animation_state);
+        .add_enter_system(GameState::WaitingForPlayers, setup_map)
+        .add_system(update_animation_state)
+        .init_resource::<PlayerSpellBuffer>();
     // resources
     app.insert_resource(LocalPlayer { handle_id: 0 });
 
     // crate plugins
     app.add_plugin(CamPlugin)
         .add_plugin(NetworkPlugin)
-        .add_plugin(SpellPlugin);
+        .add_plugin(SpellPlugin)
+        .add_plugin(UiPlugin);
 
     // Debug stuff
     //app.add_plugin(RapierDebugRenderPlugin::default());
@@ -173,18 +197,31 @@ fn spawn_players(
     mut wall_query: Query<&mut Transform, With<Wall>>,
     asset_server: Res<AssetServer>,
     settings: Res<RoomNetworkSettings>,
+    mut spawn_points: Query<(&mut Transform, &SpawnPoint)>,
 ) {
     for mut transform in query.iter_mut() {
         info!("This is called");
         transform.translation.y -= 180.0;
-        //transform.translation.z -= 50.0;
     }
     for mut transform in wall_query.iter_mut() {
         transform.translation.y -= 180.0;
         transform.translation.x -= 320.0;
     }
 
+    // collect and sort for determinism
+    let mut info = spawn_points.iter_mut().collect::<Vec<_>>();
+    info.sort_by_key(|x| x.1);
+    
+    let mut spawn_points = vec![];
+    
+    for (mut transform, spawn_point) in info {
+        transform.translation.y -= 180.0;
+        transform.translation.x -= 320.0;
+        spawn_points.push(transform.translation);
+    }
+
     for i in 0..settings.player_count {
+        //let next_spawn_point = info[i as usize].0;
         commands.spawn(PlayerBundle {
             player_id: PlayerId { handle: i as usize },
             rollback_id: Rollback::new(rip.next_id()),
@@ -218,7 +255,9 @@ fn spawn_players(
                 max_health: 100,
                 current_health: 100,
             },
-            team_id: TeamId { id: (i % 2) as usize },
+            team_id: TeamId {
+                id: (i % 2) as usize,
+            },
             sepax: Sepax {
                 convex: Convex::AABB(AABB::new((0.0, 0.0 + (i as f32 * 20.0)), 5.0, 16.0)),
             },
@@ -226,11 +265,7 @@ fn spawn_players(
             movement: Default::default(),
             aseprite_bundle: AsepriteBundle {
                 transform: Transform {
-                    translation: Vec3 {
-                        x: 0.0,
-                        y: 0.0 + (i as f32 * 20.0),
-                        z: 30.0,
-                    },
+                    translation: spawn_points[i as usize],
                     rotation: Default::default(),
                     scale: Vec3 {
                         x: 1.0,
@@ -299,12 +334,32 @@ fn spawn_players(
     commands.insert_resource(NextState(GameState::InRound))
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(mut commands: Commands) {
+    commands.spawn(CameraBundle::default());
+}
+
+fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(LdtkWorldBundle {
         ldtk_handle: asset_server.load("ldtk/map.ldtk"),
         level_set: Default::default(),
         ..default()
     });
-
-    commands.spawn(CameraBundle::default());
 }
+
+#[derive(
+    FromReflect, Reflect, Default, Eq, PartialEq, Debug, PartialOrd, Ord, Copy, Clone, Resource,
+)]
+pub struct NetworkIdProvider {
+    pub current_highest_id: i64,
+}
+
+impl NetworkIdProvider {
+    pub fn next_id(&mut self) -> i64 {
+        self.current_highest_id + 1
+    }
+}
+
+#[derive(
+    FromReflect, Reflect, Default, Eq, PartialEq, Debug, PartialOrd, Ord, Copy, Clone, Component,
+)]
+pub struct NetworkID(i64);

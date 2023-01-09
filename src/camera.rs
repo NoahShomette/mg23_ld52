@@ -12,7 +12,7 @@ impl Plugin for CamPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<CursorWorldPos>()
-            .add_system(camera_resizer)
+            //.add_system(camera_resizer)
             .add_system( update_cursor_world_pos.run_in_state(GameState::BetweenRound))
             .add_system( update_cursor_world_pos.run_in_state(GameState::InRound));
 

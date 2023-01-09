@@ -3,27 +3,29 @@ use crate::physics::Movement;
 use crate::player::input::{CAST_SPELL, DASH};
 use crate::player::{
     MovementState, PlayerCombatState, PlayerId, PlayerMovementState, PlayerMovementStats,
-    PlayerSpells, SpellCastState,
+    PlayerSpellBuffer, PlayerSpells, SpellAction, SpellCastState,
 };
-use crate::spell::{
-    DamageDealer, DamageSpellProjectileBundle, SpellCasterId, SpellId, SpellLifetime,
-};
+use crate::spell::{DamageDealer, DamageSpellProjectileBundle, SpellAnimation, SpellCasterId, SpellId, SpellLifetime};
+use bevy::log::info;
 use bevy::prelude::{
-    default, AssetServer, Commands, Entity, Query, Res, Time, Transform, With, Without,
+    default, Commands, Entity, Query, Res, ResMut, Time, Transform, With, Without,
 };
 use bevy_aseprite::anim::AsepriteAnimation;
 use bevy_aseprite::AsepriteBundle;
-use bevy_ggrs::PlayerInputs;
-use bevy_sepax2d::prelude::{Movable, Sepax};
+use bevy_ggrs::{PlayerInputs, Rollback, RollbackIdProvider};
+use bevy_sepax2d::prelude::Sepax;
 use bevy_sepax2d::Convex;
 use sepax2d::prelude::Circle;
 use sepax2d::sat_overlap;
+use crate::assets::SpellSprites;
 
 pub fn handle_spell_casts(
     inputs: Res<PlayerInputs<GGRSConfig>>,
-    mut commands: Commands,
     mut players_query: Query<(&PlayerId, &mut PlayerCombatState, &PlayerSpells)>,
-    asset_server: Res<AssetServer>,
+    //spell_buffer: ResMut<PlayerSpellBuffer>,
+    mut commands: Commands,
+    game_spells: Res<SpellSprites>,
+    mut rip: ResMut<RollbackIdProvider>,
 ) {
     // collect and sort for determinism
     let mut info = players_query.iter_mut().collect::<Vec<_>>();
@@ -37,27 +39,35 @@ pub fn handle_spell_casts(
                 sepax: Sepax {
                     convex: Convex::Circle(Circle {
                         position: (input.mouse_position.x as f32, input.mouse_position.y as f32),
-                        radius: 96.0,
+                        radius: 65.0,
                     }),
                 },
                 damage: DamageDealer { damage_amount: 30 },
+                spell_id: Default::default(),
                 spell_caster_id: SpellCasterId {
-                    id: PlayerId { handle: id.handle },
+                    id: PlayerId {
+                        handle: id.handle,
+                    },
                 },
                 spell_lifetime: SpellLifetime {
-                    current_lifetime: 6,
+                    max_cast_delay: 1.0,
+                    current_cast_delay: 0.0,
+                    max_cast_frame: 0,
+                    max_explosion_frame: 6,
                 },
                 aseprite_bundle: AsepriteBundle {
                     transform: Transform {
-                        translation: input.mouse_position.extend(15.0),
+                        translation: input.mouse_position.extend(20.0),
                         ..default()
                     },
-                    animation: AsepriteAnimation::from("Explosion"),
-                    aseprite: asset_server.load("spells_art/Explosion_indicator.aseprite"),
+                    animation: AsepriteAnimation::from("Indicator"),
+                    aseprite: game_spells.explosion_spell.clone(),
                     ..default()
                 },
-                movable: Movable { axes: vec![] },
+                animation_state: SpellAnimation::CastDelay,
+                rollback_id: Rollback::new(rip.next_id()),
             });
+
             combat_state.spell_cast_state = SpellCastState::None;
         }
     }
@@ -65,16 +75,24 @@ pub fn handle_spell_casts(
 
 pub fn update_spell_lifetimes(
     mut commands: Commands,
-    mut spell_query: Query<(Entity, &mut SpellLifetime, &SpellId, &AsepriteAnimation)>,
+    mut spell_query: Query<(Entity, &mut SpellLifetime, &SpellId, &mut AsepriteAnimation, &SpellAnimation)>,
+    time: Res<Time>,
 ) {
     // collect and sort for determinism
     let mut info = spell_query.iter_mut().collect::<Vec<_>>();
     info.sort_by_key(|x| x.2);
 
-    for (entity, lifetime, _, animation) in info {
-        if animation.current_frame == lifetime.current_lifetime {
-            commands.entity(entity).despawn();
+    for (entity, mut lifetime, _, mut animation, spell_animation) in info {
+        lifetime.current_cast_delay += time.delta_seconds();
+        if lifetime.current_cast_delay >= lifetime.max_cast_delay{
+            if SpellAnimation::Cast != *spell_animation{
+                *animation = AsepriteAnimation::from("Explosion");
+            }
+            if animation.current_frame() == lifetime.max_cast_frame {
+                commands.entity(entity).despawn();
+            }
         }
+
     }
 }
 
@@ -86,6 +104,7 @@ pub fn spell_collision_system(
     for (spell, spell_sepax, spell_caster_id) in spells.iter() {
         for (enemy, enemy_sepax, player_id) in players.iter() {
             if spell_caster_id.id.handle != player_id.handle {
+                info!("overlapped enemy");
                 if sat_overlap(enemy_sepax.shape(), spell_sepax.shape()) {
                     commands.entity(enemy).despawn();
                 }

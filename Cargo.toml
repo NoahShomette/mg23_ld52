@@ -37,3 +37,7 @@ sepax2d = "0.3.8"
 bevy_ecs_ldtk = "0.5.0"
 bevy_aseprite = "0.9"
 bevy_simple_2d_outline = "0.1.1"
+bevy_egui = "0.18.0"
+
+[build-dependencies]
+embed-resource = "1.4"
