@@ -112,7 +112,7 @@ pub fn main_menu_ui(
                 let menu_button =
                     ui[1].add_sized([80., 26.], egui::Button::new(RichText::new("PLAY")));
                 if menu_button.clicked() {
-                    commands.insert_resource(RoomNetworkSettings::testing_local());
+                    commands.insert_resource(RoomNetworkSettings::testing_ip());
                     commands.insert_resource(NextState(GameState::WaitingForPlayers));
                 };
             });
