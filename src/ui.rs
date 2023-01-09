@@ -35,7 +35,7 @@ fn setup_ui(mut egui_context: ResMut<EguiContext>) {
     let mut style = (*egui_context.ctx_mut().style()).clone();
     fonts.font_data.insert(
         "main_font".to_owned(),
-        FontData::from_static(include_bytes!("../assets/Abaddon Bold.ttf")),
+        FontData::from_static(include_bytes!("../assets/Abaddon_Bold.ttf")),
     ); // .ttf and .otf supported
     // Large button text:
     fonts
