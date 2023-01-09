@@ -1,8 +1,11 @@
 ﻿use crate::networking::ggrs::GGRSConfig;
 use crate::physics::Movement;
 use crate::player::input::DASH;
-use crate::player::{MovementState, PlayerId, PlayerMovementState, PlayerMovementStats};
+use crate::player::{
+    AnimationState, MovementState, PlayerId, PlayerMovementState, PlayerMovementStats,
+};
 use bevy::prelude::{info, Entity, IntoSystemDescriptor, Query, Res, Schedule, Time, Transform};
+use bevy_aseprite::anim::AsepriteAnimation;
 use bevy_ggrs::{GGRSPlugin, PlayerInputs};
 use bevy_sepax2d::prelude::Movable;
 use std::ops::Deref;
@@ -35,7 +38,15 @@ pub fn move_players(
         }
 
         if move_delta.normalize().is_nan() {
-            //player_movement.movement_state = MovementState::Idle;
+            if let MovementState::Dashing { .. } = player_movement.movement_state {
+            } else {
+                player_movement.movement_state = MovementState::Idle;
+            }
+        }else{
+            if let MovementState::Dashing { .. } = player_movement.movement_state {
+            } else {
+                player_movement.movement_state = MovementState::Walking;
+            }
         }
 
         movement.velocity = move_delta.normalize_or_zero();
@@ -56,9 +67,15 @@ pub fn velocity_system(
     let mut info = query.iter_mut().collect::<Vec<_>>();
     info.sort_by_key(|x| x.0);
 
-    for (_, mut movement, stats, mut state, mut transform) in info {
+    for (
+        _,
+        mut movement,
+        stats,
+        mut state,
+        mut transform,
+    ) in info
+    {
         let mut movement_speed = stats.speed;
-
         match state.movement_state {
             MovementState::Dashing {
                 duration,
@@ -79,8 +96,6 @@ pub fn velocity_system(
                     (movement.velocity.x * movement_speed) * time.delta_seconds();
                 transform.translation.y +=
                     (movement.velocity.y * movement_speed) * time.delta_seconds();
-                //movement.velocity.x *= movement.damping.powf(time.delta_seconds());
-                //movement.velocity.y *= movement.damping.powf(time.delta_seconds());
             }
         }
     }
@@ -108,7 +123,7 @@ pub fn update_dash_info(
             } => {
                 duration += time.delta_seconds();
                 if duration >= stats.dash_duration {
-                    state.movement_state = MovementState::Walking;
+                    state.movement_state = MovementState::Idle;
                 } else {
                     state.movement_state = MovementState::Dashing {
                         duration,

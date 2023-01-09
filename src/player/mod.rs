@@ -3,11 +3,48 @@
 use crate::physics::Movement;
 use crate::spell::SpellCastInfo;
 use bevy::math::Vec2;
-use bevy::prelude::{Bundle, Component, FromReflect, Reflect, SpriteBundle};
-use bevy::sprite::MaterialMesh2dBundle;
+use bevy::prelude::{Bundle, Component, Entity, FromReflect, Query, Reflect, SpriteBundle, Transform, With};
+use bevy_aseprite::anim::AsepriteAnimation;
+use bevy_aseprite::AsepriteBundle;
 use bevy_ggrs::Rollback;
 use bevy_sepax2d::prelude::{Movable, Sepax};
-use bevy_simple_2d_outline::OutlineAndTextureMaterial;
+
+pub fn update_animation_state(
+    mut query: Query<(
+        & PlayerMovementState,
+        &mut AnimationState,
+        &mut AsepriteAnimation,
+    ),
+    With<PlayerId>>,
+) {
+    for (state, mut animation_state, mut aseprite_animation) in query.iter_mut() {
+        match state.movement_state {
+            MovementState::Dashing {
+                duration,
+                direction,
+            } => {
+                if AnimationState::Dash != *animation_state {
+                    *aseprite_animation = AsepriteAnimation::from("Dash");
+                    *animation_state = AnimationState::Dash;
+                }
+            }
+            MovementState::Walking => {
+                if AnimationState::Run != *animation_state {
+                    *aseprite_animation = AsepriteAnimation::from("Run");
+                    *animation_state = AnimationState::Run;
+
+                }
+            }
+            MovementState::Idle => {
+                if AnimationState::Idle != *animation_state {
+                    *aseprite_animation = AsepriteAnimation::from("Idle");
+                    *animation_state = AnimationState::Idle;
+
+                }
+            }
+        }
+    }
+}
 
 #[derive(Bundle)]
 pub struct PlayerBundle {
@@ -26,7 +63,8 @@ pub struct PlayerBundle {
     pub movable: Movable,
     pub movement: Movement,
 
-    pub mesh_bundle: MaterialMesh2dBundle<OutlineAndTextureMaterial>,
+    pub aseprite_bundle: AsepriteBundle,
+    pub animation_state: AnimationState,
 }
 
 pub struct PlayerState {}
@@ -68,7 +106,6 @@ pub struct PlayerDashInfo {
 }
 
 #[derive(Reflect, Component, Debug, Copy, Clone, PartialEq)]
-
 pub enum MovementState {
     Dashing { duration: f32, direction: Vec2 },
     Walking,
@@ -77,7 +114,20 @@ pub enum MovementState {
 
 impl Default for MovementState {
     fn default() -> Self {
-        MovementState::Walking
+        MovementState::Idle
+    }
+}
+
+#[derive(Reflect, Component, Debug, Copy, Clone, PartialEq)]
+pub enum AnimationState {
+    Dash,
+    Run,
+    Idle,
+}
+
+impl Default for AnimationState {
+    fn default() -> Self {
+        AnimationState::Idle
     }
 }
 
@@ -99,7 +149,9 @@ pub enum PlayerActions {
     CastSpell,
 }
 
-#[derive(FromReflect, Reflect, Default, Eq, PartialEq, Debug, PartialOrd, Ord, Copy, Clone, Component)]
+#[derive(
+    FromReflect, Reflect, Default, Eq, PartialEq, Debug, PartialOrd, Ord, Copy, Clone, Component,
+)]
 pub struct Health {
     pub max_health: u32,
     pub current_health: u32,
@@ -107,7 +159,9 @@ pub struct Health {
 
 impl Health {}
 
-#[derive(FromReflect, Reflect, Default, Eq, PartialEq, Debug, PartialOrd, Ord, Copy, Clone, Component)]
-pub struct TeamId{
+#[derive(
+    FromReflect, Reflect, Default, Eq, PartialEq, Debug, PartialOrd, Ord, Copy, Clone, Component,
+)]
+pub struct TeamId {
     pub id: usize,
 }
