@@ -43,7 +43,14 @@ pub struct SpellProjectileInfo {
     pub id: usize,
 }
 
+#[derive(FromReflect, Reflect, Eq, PartialEq, Debug, PartialOrd, Ord, Clone, Component)]
+pub struct SpellCasterId{
+    pub id: PlayerId,
+}
 
+pub struct DamageDealer{
+    pub damage_amount: u32,
+}
 
 pub fn show_spell_preview(){
     

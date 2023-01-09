@@ -4,8 +4,10 @@ use crate::physics::Movement;
 use crate::spell::SpellCastInfo;
 use bevy::math::Vec2;
 use bevy::prelude::{Bundle, Component, FromReflect, Reflect, SpriteBundle};
+use bevy::sprite::MaterialMesh2dBundle;
 use bevy_ggrs::Rollback;
 use bevy_sepax2d::prelude::{Movable, Sepax};
+use bevy_simple_2d_outline::OutlineAndTextureMaterial;
 
 #[derive(Bundle)]
 pub struct PlayerBundle {
@@ -24,7 +26,7 @@ pub struct PlayerBundle {
     pub movable: Movable,
     pub movement: Movement,
 
-    pub sprite_bundle: SpriteBundle,
+    pub mesh_bundle: MaterialMesh2dBundle<OutlineAndTextureMaterial>,
 }
 
 pub struct PlayerState {}

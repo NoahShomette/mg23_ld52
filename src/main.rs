@@ -10,6 +10,7 @@ use crate::player::input::input;
 use crate::player::{Health, MovementState, PlayerBundle, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells, TeamId};
 use crate::spell::{SpellCastInfo, SpellType, SpellProjectileInfo, GameSpells};
 use bevy::prelude::*;
+use bevy::sprite::{Material2dPlugin, MaterialMesh2dBundle};
 use bevy::window::close_on_esc;
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
 use bevy_ecs_ldtk::{
@@ -19,6 +20,7 @@ use bevy_ecs_ldtk::prelude::RegisterLdtkObjects;
 use bevy_ggrs::{GGRSPlugin, Rollback, RollbackIdProvider};
 use bevy_sepax2d::prelude::{Movable, Sepax};
 use bevy_sepax2d::Convex;
+use bevy_simple_2d_outline::OutlineAndTextureMaterial;
 use bevy_tiled_camera::TiledCameraPlugin;
 use iyes_loopless::prelude::{AppLooplessStateExt, IntoConditionalSystem, NextState};
 use sepax2d::prelude::AABB;
@@ -78,6 +80,7 @@ fn main() {
         )
         .add_state(GameState::AssetLoading)
         //base plugins
+        .insert_resource(Msaa { samples: 4})
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(
             DefaultPlugins
@@ -102,8 +105,9 @@ fn main() {
         })
         .add_plugin(LdtkPlugin)
         .register_ldtk_entity::<WallCollisions>("Wall")
-
         .insert_resource(LevelSelection::Index(0))
+        .add_plugin(Material2dPlugin::<OutlineAndTextureMaterial>::default())
+
         // base systems
         .add_enter_system(GameState::WaitingForPlayers, setup)
         .add_enter_system(GameState::WaitingForPlayers, start_matchbox_socket)
@@ -149,6 +153,9 @@ fn spawn_players(
     mut wall_query: Query<&mut Transform, With<Wall>>,
     asset_server: Res<AssetServer>,
     settings: Res<RoomNetworkSettings>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<OutlineAndTextureMaterial>>,
+
 ) {
     for mut transform in query.iter_mut() {
         info!("This is called");
@@ -199,24 +206,17 @@ fn spawn_players(
             },
             movable: Movable { axes: vec![] },
             movement: Default::default(),
-            sprite_bundle: SpriteBundle {
-                transform: Transform {
-                    translation: Vec3 {
-                        x: 0.0,
-                        y: 0.0 + (i as f32 * 20.0),
-                        z: 30.0,
-                    },
-                    rotation: Default::default(),
-                    scale: Vec3 {
-                        x: 1.0,
-                        y: 1.0,
-                        z: 1.0,
-                    },
-                },
+            mesh_bundle: MaterialMesh2dBundle {
+            mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
+            transform: Transform::default().with_scale(Vec3::splat(128.)),
+            material: materials.add(OutlineAndTextureMaterial {
+                color: Color::BLUE,
+                thickness : 0.1,
                 texture: sprites.mageling_green.clone_weak(),
-                ..default()
-            },
-        });
+            }),
+            ..default()
+        },
+    });
     }
 
     commands.spawn((
@@ -238,6 +238,33 @@ fn spawn_players(
                 },
             },
             texture: sprites.mageling_green.clone_weak(),
+            ..default()
+        },
+    ));
+
+    commands.spawn((
+        Sepax {
+            convex: Convex::AABB(AABB::new((0.0, 0.0 - (4 as f32 * 20.0)), 20.0, 20.0)),
+        },
+        SpriteBundle {
+            transform: Transform {
+                translation: Vec3 {
+                    x: 0.0,
+                    y: 0.0 - (4 as f32 * 20.0),
+                    z: 30.0,
+                },
+                rotation: Default::default(),
+                scale: Vec3 {
+                    x: 1.0,
+                    y: 1.0,
+                    z: 1.0,
+                },
+            },
+            texture: sprites.mageling_green.clone_weak(),
+            sprite: Sprite{
+                color: Color::RED,
+                ..default()
+            },
             ..default()
         },
     ));

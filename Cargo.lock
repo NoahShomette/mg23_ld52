@@ -1125,6 +1125,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_simple_2d_outline"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50292a7d8c858be5d6029ff8a0aa5195a00c97de9b3b25e018814ac7b8747360"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_sprite"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3147,6 +3156,7 @@ dependencies = [
  "bevy_ecs_ldtk",
  "bevy_ggrs",
  "bevy_sepax2d",
+ "bevy_simple_2d_outline",
  "bevy_tiled_camera",
  "bytemuck",
  "iyes_loopless",
