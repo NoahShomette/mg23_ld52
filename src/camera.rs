@@ -40,7 +40,7 @@ impl Default for CameraBundle{
                 .with_pixels_per_tile([16, 18])
                 .with_tile_count([40, 20])
                 .with_world_space(WorldSpace::Pixels)
-                .with_clear_color(Color::BLACK),
+                .with_clear_color(Color::hex("090a14").expect("Color not valid hex")),
             camera: Default::default(),
         }
         

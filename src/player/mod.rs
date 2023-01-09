@@ -1,21 +1,23 @@
 ﻿pub(crate) mod input;
 
 use crate::physics::Movement;
-use crate::spell::SpellCastInfo;
+use crate::spell::{SpellCastInfo};
 use bevy::math::Vec2;
-use bevy::prelude::{Bundle, Component, Entity, FromReflect, Query, Reflect, SpriteBundle, Transform, With};
+use bevy::prelude::{Bundle, Component, FromReflect, Query, Reflect, Resource, With};
 use bevy_aseprite::anim::AsepriteAnimation;
 use bevy_aseprite::AsepriteBundle;
 use bevy_ggrs::Rollback;
 use bevy_sepax2d::prelude::{Movable, Sepax};
 
 pub fn update_animation_state(
-    mut query: Query<(
-        & PlayerMovementState,
-        &mut AnimationState,
-        &mut AsepriteAnimation,
-    ),
-    With<PlayerId>>,
+    mut query: Query<
+        (
+            &PlayerMovementState,
+            &mut AnimationState,
+            &mut AsepriteAnimation,
+        ),
+        With<PlayerId>,
+    >,
 ) {
     for (state, mut animation_state, mut aseprite_animation) in query.iter_mut() {
         match state.movement_state {
@@ -32,19 +34,18 @@ pub fn update_animation_state(
                 if AnimationState::Run != *animation_state {
                     *aseprite_animation = AsepriteAnimation::from("Run");
                     *animation_state = AnimationState::Run;
-
                 }
             }
             MovementState::Idle => {
                 if AnimationState::Idle != *animation_state {
                     *aseprite_animation = AsepriteAnimation::from("Idle");
                     *animation_state = AnimationState::Idle;
-
                 }
             }
         }
     }
 }
+
 
 #[derive(Bundle)]
 pub struct PlayerBundle {
@@ -53,6 +54,7 @@ pub struct PlayerBundle {
     pub rollback_id: Rollback,
     //spell stuff
     pub player_spells: PlayerSpells,
+    pub combat_state: PlayerCombatState,
     //player state
     pub player_movement: PlayerMovementStats,
     pub player_movement_state: PlayerMovementState,
@@ -69,16 +71,23 @@ pub struct PlayerBundle {
 
 pub struct PlayerState {}
 
-#[derive(Reflect, Default, Component, Debug, Copy, Clone, PartialEq)]
+#[derive(Reflect, Default, Component, Debug, PartialEq)]
 pub struct PlayerCombatState {
-    spell_cast_state: SpellCastState,
+    pub spell_cast_state: SpellCastState,
 }
 
-#[derive(Reflect, Default, Debug, Copy, Clone, PartialEq)]
+#[derive(Reflect, Default, Resource, Debug, PartialEq)]
+pub struct LocalPlayer {
+    pub handle_id: usize,
+}
+
+#[derive(Reflect, Default, Debug, PartialEq)]
 pub enum SpellCastState {
     #[default]
     None,
-    Precast,
+    Precast {
+        spell_id: SpellCastInfo,
+    },
     Cast,
 }
 

@@ -2,7 +2,7 @@ use crate::assets::{SpellSprites, Sprites};
 use crate::camera::{CamPlugin, CameraBundle};
 use crate::map::{Wall, WallCollisions};
 use crate::networking::ggrs::GGRSConfig;
-use crate::networking::rollback_systems::{move_players, update_dash_info, velocity_system};
+use crate::networking::rollback_systems::{handle_spell_casts, move_players, spell_collision_system, update_dash_info, update_spell_lifetimes, velocity_system};
 use crate::networking::{
     start_matchbox_socket, wait_for_players, NetworkPlugin, RoomNetworkSettings,
 };
@@ -10,8 +10,11 @@ use crate::physics::{
     clear_correction_system, collision_system, update_movable_system, update_walls_system, Movement,
 };
 use crate::player::input::input;
-use crate::player::{AnimationState, Health, MovementState, PlayerBundle, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells, TeamId, update_animation_state};
-use crate::spell::{GameSpells, SpellCastInfo, SpellProjectileInfo, SpellType};
+use crate::player::{
+    update_animation_state, AnimationState, Health, LocalPlayer, MovementState, PlayerBundle,
+    PlayerCombatState, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells, TeamId,
+};
+use crate::spell::{GameSpells, SpellCastInfo, SpellPlugin, SpellType};
 use bevy::prelude::*;
 use bevy::sprite::Material2dPlugin;
 use bevy::window::close_on_esc;
@@ -38,6 +41,7 @@ mod networking;
 mod physics;
 mod player;
 mod spell;
+mod combat;
 
 const FPS: usize = 60;
 
@@ -46,9 +50,10 @@ fn main() {
 
     GGRSPlugin::<GGRSConfig>::new()
         // define frequency of rollback game logic update
-        //.with_update_frequency(FPS)
+        .with_update_frequency(FPS)
         // define system that returns inputs given a player handle, so GGRS can send the inputs around
         .with_input_system(input)
+        
         // register types of components AND resources you want to be rolled back
         .register_rollback_component::<Transform>()
         .register_rollback_component::<Movement>()
@@ -56,6 +61,8 @@ fn main() {
         .register_rollback_component::<PlayerMovementStats>()
         .register_rollback_component::<PlayerMovementState>()
         .register_rollback_component::<AnimationState>()
+        .register_rollback_component::<PlayerCombatState>()
+        //.register_rollback_component::<PlayerCombatState>()
         //resources
         .register_rollback_resource::<GameSpells>()
         // these systems will be executed as part of the advance frame update
@@ -64,13 +71,17 @@ fn main() {
                 "ROLLBACK_STAGE",
                 SystemStage::single_threaded()
                     .with_system(move_players)
-                    .with_system(velocity_system.after(move_players))
+                    .with_system(handle_spell_casts.after(move_players))
+                    .with_system(velocity_system.after(handle_spell_casts))
                     .with_system(update_dash_info.after(velocity_system))
                     // physics stuff - need to be at the end
                     .with_system(clear_correction_system.after(update_dash_info))
                     .with_system(update_movable_system.after(clear_correction_system))
                     .with_system(update_walls_system.after(update_movable_system))
-                    .with_system(collision_system.after(update_walls_system)),
+                    .with_system(collision_system.after(update_walls_system))
+                    
+                    .with_system(spell_collision_system.after(collision_system))
+                    .with_system(update_spell_lifetimes.after(spell_collision_system)),
             ),
         )
         // make it happen in the bevy app
@@ -85,14 +96,14 @@ fn main() {
         )
         .add_state(GameState::AssetLoading)
         //base plugins
-        .insert_resource(Msaa { samples: 4 })
+        //.insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(
             DefaultPlugins
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     window: WindowDescriptor {
-                        title: "Magelings".to_string(),
+                        title: "Mageling".to_string(),
                         position: WindowPosition::Automatic,
                         fit_canvas_to_parent: true,
                         canvas: Some("#bevy".to_string()),
@@ -119,10 +130,13 @@ fn main() {
         .add_system(wait_for_players.run_in_state(GameState::WaitingForPlayers))
         .add_enter_system(GameState::BetweenRound, spawn_players)
         .add_system(update_animation_state);
-    //
+    // resources
+    app.insert_resource(LocalPlayer { handle_id: 0 });
 
     // crate plugins
-    app.add_plugin(CamPlugin).add_plugin(NetworkPlugin);
+    app.add_plugin(CamPlugin)
+        .add_plugin(NetworkPlugin)
+        .add_plugin(SpellPlugin);
 
     // Debug stuff
     //app.add_plugin(RapierDebugRenderPlugin::default());
@@ -178,15 +192,21 @@ fn spawn_players(
                 autoattack: SpellCastInfo {
                     spell_type: SpellType::SelfCast,
                     cooldown: 0.0,
-                    cast_spell: SpellProjectileInfo { id: 0 },
                     spell_indicator: spell_sprites.circle_indicator.clone_weak(),
+                    spell_id: Default::default(),
                 },
-                spells: vec![],
+                spells: vec![SpellCastInfo {
+                    spell_type: SpellType::SelfCast,
+                    cooldown: 0.0,
+                    spell_indicator: spell_sprites.circle_indicator.clone_weak(),
+                    spell_id: Default::default(),
+                }],
             },
+            combat_state: Default::default(),
             player_movement: PlayerMovementStats {
-                speed: 130.0,
+                speed: 160.0,
                 dash_power: 3.0,
-                dash_duration: 0.2,
+                dash_duration: 0.15,
                 dash_cooldown_length: 5.0,
             },
             player_movement_state: PlayerMovementState {
@@ -198,7 +218,7 @@ fn spawn_players(
                 max_health: 100,
                 current_health: 100,
             },
-            team_id: TeamId { id: 0 },
+            team_id: TeamId { id: (i % 2) as usize },
             sepax: Sepax {
                 convex: Convex::AABB(AABB::new((0.0, 0.0 + (i as f32 * 20.0)), 5.0, 16.0)),
             },
@@ -222,7 +242,7 @@ fn spawn_players(
                 aseprite: asset_server.load("magelings/Red-Mageling-Run.aseprite"),
                 ..default()
             },
-            animation_state: AnimationState::Idle
+            animation_state: AnimationState::Idle,
         });
     }
 

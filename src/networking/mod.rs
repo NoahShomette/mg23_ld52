@@ -18,10 +18,10 @@ impl Plugin for NetworkPlugin {
         //app.insert_resource(RoomNetworkSettings::default_matchmake_room());
         
         // insert basic default local matchmaking resource for testing
-        //app.insert_resource(RoomNetworkSettings::testing_local());
+        app.insert_resource(RoomNetworkSettings::testing_local());
 
         //testing online
-        app.insert_resource(RoomNetworkSettings::testing_ip());
+        //app.insert_resource(RoomNetworkSettings::testing_ip());
         
     }
 }
@@ -171,8 +171,8 @@ pub fn wait_for_players(
     // create a new ggrs session
     let mut session_builder = SessionBuilder::<GGRSConfig>::new()
         .with_num_players(settings.player_count as usize)
-        .with_max_prediction_window(8) // (optional) set max prediction window
-        .with_input_delay(1) // (optional) set input delay for the local player
+        .with_max_prediction_window(12) // (optional) set max prediction window
+        .with_input_delay(2) // (optional) set input delay for the local player
         .with_fps(FPS)
         .expect("Invalid FPS");
 
