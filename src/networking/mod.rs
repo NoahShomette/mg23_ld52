@@ -18,10 +18,10 @@ impl Plugin for NetworkPlugin {
         //app.insert_resource(RoomNetworkSettings::default_matchmake_room());
         
         // insert basic default local matchmaking resource for testing
-        app.insert_resource(RoomNetworkSettings::testing_local());
+        //app.insert_resource(RoomNetworkSettings::testing_local());
 
         //testing online
-        //app.insert_resource(RoomNetworkSettings::testing_ip());
+        app.insert_resource(RoomNetworkSettings::testing_ip());
         
     }
 }

@@ -18,6 +18,7 @@ pub struct PlayerBundle {
     pub player_movement: PlayerMovementStats,
     pub player_movement_state: PlayerMovementState,
     pub health: Health,
+    pub team_id: TeamId,
     // assorted
     pub sepax: Sepax,
     pub movable: Movable,
@@ -103,3 +104,8 @@ pub struct Health {
 }
 
 impl Health {}
+
+#[derive(FromReflect, Reflect, Default, Eq, PartialEq, Debug, PartialOrd, Ord, Copy, Clone, Component)]
+pub struct TeamId{
+    pub id: usize,
+}

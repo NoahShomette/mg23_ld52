@@ -5,9 +5,9 @@ use crate::networking::rollback_systems::{move_players, update_dash_info, veloci
 use crate::networking::{
     start_matchbox_socket, wait_for_players, NetworkPlugin, RoomNetworkSettings,
 };
-use crate::physics::{clear_correction_system, collision_system, update_movable_system, Movement};
+use crate::physics::{clear_correction_system, collision_system, update_movable_system, Movement, update_walls_system};
 use crate::player::input::input;
-use crate::player::{Health, MovementState, PlayerBundle, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells};
+use crate::player::{Health, MovementState, PlayerBundle, PlayerId, PlayerMovementState, PlayerMovementStats, PlayerSpells, TeamId};
 use crate::spell::{SpellCastInfo, SpellType, SpellProjectileInfo, GameSpells};
 use bevy::prelude::*;
 use bevy::window::close_on_esc;
@@ -22,7 +22,7 @@ use bevy_sepax2d::Convex;
 use bevy_tiled_camera::TiledCameraPlugin;
 use iyes_loopless::prelude::{AppLooplessStateExt, IntoConditionalSystem, NextState};
 use sepax2d::prelude::AABB;
-use crate::map::WallCollisions;
+use crate::map::{Wall, WallCollisions};
 
 mod assets;
 mod camera;
@@ -62,7 +62,8 @@ fn main() {
                     // physics stuff - need to be at the end
                     .with_system(clear_correction_system.after(update_dash_info))
                     .with_system(update_movable_system.after(clear_correction_system))
-                    .with_system(collision_system.after(update_movable_system)),
+                    .with_system(update_walls_system.after(update_movable_system))
+                    .with_system(collision_system.after(update_walls_system)),
             ),
         )
         // make it happen in the bevy app
@@ -100,7 +101,7 @@ fn main() {
             ..default()
         })
         .add_plugin(LdtkPlugin)
-        .register_ldtk_int_cell::<WallCollisions>(1)
+        .register_ldtk_entity::<WallCollisions>("Wall")
 
         .insert_resource(LevelSelection::Index(0))
         // base systems
@@ -144,7 +145,8 @@ fn spawn_players(
 
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
-    mut query: Query<&mut Transform, With<Handle<LdtkLevel>>>,
+    mut query: Query<&mut Transform, (With<Handle<LdtkLevel>>, Without<Wall>)>,
+    mut wall_query: Query<&mut Transform, With<Wall>>,
     asset_server: Res<AssetServer>,
     settings: Res<RoomNetworkSettings>,
 ) {
@@ -152,6 +154,11 @@ fn spawn_players(
         info!("This is called");
         transform.translation.y -= 180.0;
         //transform.translation.z -= 50.0;
+    }
+    for mut transform in wall_query.iter_mut() {
+        info!("This is called");
+        transform.translation.y -= 180.0;
+        transform.translation.x -= 320.0;
     }
 
     for i in 0..settings.player_count {
@@ -184,8 +191,11 @@ fn spawn_players(
                 max_health: 100,
                 current_health: 100,
             },
+            team_id: TeamId{
+                id: 0,
+            },
             sepax: Sepax {
-                convex: Convex::AABB(AABB::new((0.0, 0.0 + (i as f32 * 20.0)), 20.0, 20.0)),
+                convex: Convex::AABB(AABB::new((0.0, 0.0 + (i as f32 * 20.0)), 5.0, 16.0)),
             },
             movable: Movable { axes: vec![] },
             movement: Default::default(),

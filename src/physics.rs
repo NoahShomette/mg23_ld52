@@ -3,6 +3,7 @@ use bevy::prelude::{App, Component, CoreStage, Entity, IntoSystemDescriptor, Plu
 use bevy_sepax2d::plugin::SepaxSystems;
 use bevy_sepax2d::prelude::{Movable, NoCollision, Sepax};
 use sepax2d::sat_collision;
+use crate::map::Wall;
 
 #[derive(Reflect, Component, Debug, Copy, Clone, PartialEq)]
 pub struct Movement {
@@ -93,6 +94,27 @@ pub fn update_movable_system(mut query: Query<(Entity, &Transform, &Movable, &mu
     info.sort_by_key(|x| x.0);
     
     for (_, transform, _movable, mut sepax) in info
+    {
+
+        let position = (transform.translation.x, transform.translation.y);
+
+        let shape = sepax.shape_mut();
+        shape.set_position(position);
+
+    }
+
+}
+
+/// Updates the position information contained inside of [`Sepax`](crate::components::Sepax)
+/// components to match the entity's translation in the world. This is necessary because
+/// sepax2d is not a Bevy-centric crate, so it does not use Transforms natively.
+pub fn update_walls_system(mut query: Query<(Entity, &Transform, &Wall, &mut Sepax)>)
+{
+    // collect and sort for determinism
+    let mut info = query.iter_mut().collect::<Vec<_>>();
+    info.sort_by_key(|x| x.0);
+
+    for (_, transform, _wall, mut sepax) in info
     {
 
         let position = (transform.translation.x, transform.translation.y);
